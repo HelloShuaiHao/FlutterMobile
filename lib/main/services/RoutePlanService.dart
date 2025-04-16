@@ -19,7 +19,7 @@ class RoutePlanService {
       };
 
       final response = await HttpUtils.get<Map<String, dynamic>>(
-        'https://localhost:7006/api/delivery/route-plans/by-vehicle-id',
+        'https://localhost:7006/api/delivery/route-plans/by-vehicle-id', // fix later
         params: queryParams,
       );
 

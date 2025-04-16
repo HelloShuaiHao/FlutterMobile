@@ -67,8 +67,10 @@ class LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     print("当前进入 login_screen.dart 页面");
+    
     // 调用 getAllVehicles 方法获取数据
     _futureVehicles = VehicleService().getAllVehicles(vehicleStatuses: [0, 1, 2]);
+    
     init();
   }
 
@@ -101,8 +103,10 @@ class LoginScreenState extends State<LoginScreen> {
         String email = Encryption.instance.encrypt(emailController.text.trim());
         String password =
             Encryption.instance.encrypt(passController.text.trim());
+        
         // String playerId =
         //     Encryption.instance.encrypt(getStringAsync(PLAYER_ID).validate());
+        
         String playerId = '';
 
         Map req = {
@@ -118,12 +122,20 @@ class LoginScreenState extends State<LoginScreen> {
         }
         // self defined function
         authService
-              .signInWithEmailPassword(context,
-                  email: emailController.text, password: passController.text)
-              .then((value) async {
-                appStore.setLoading(false);
-              })
-              .catchError((e) {});
+            .signInWithEmailPassword(context,
+                email: emailController.text, password: passController.text)
+            .then((value) async {
+              appStore.setLoading(false);
+              
+              // 登录成功后跳转到 DHomeFragment
+              DHomeFragment().launch(context, isNewTask: true);
+            })
+            .catchError((e) {
+              appStore.setLoading(false);
+              
+              // 登录失败时显示错误提示
+              toast("Login failed: ${e.toString()}");
+            });
 
         // initial one      
         await logInApi(req).then((v) async {
@@ -160,14 +172,17 @@ class LoginScreenState extends State<LoginScreen> {
                     v.data!.otpVerifyAt.isEmptyOrNull ||
                     (v.data!.documentVerifiedAt.isEmptyOrNull &&
                         getStringAsync(USER_TYPE) == DELIVERY_MAN)) {
+                  // 跳转到验证列表页面
                   VerificationListScreen(
                     isSignIn: true,
                   ).launch(context);
                 } else if (v.data!.countryId != null &&
                     v.data!.cityId != null) {
+                  // 获取国家和城市详情后继续
                   await getCountryDetailApiCall(v.data!.countryId.validate());
                   getCityDetailApiCall(v.data!.cityId.validate());
                 } else {
+                  // 跳转到用户城市选择页面
                   UserCitySelectScreen().launch(context, isNewTask: true);
                 }
               } else {
@@ -264,16 +279,18 @@ class LoginScreenState extends State<LoginScreen> {
             (getBoolAsync(IS_VERIFIED_DELIVERY_MAN) ||
                 getStringAsync(USER_TYPE) == CLIENT)) {
           if (getStringAsync(USER_TYPE) == CLIENT) {
+            // 跳转到用户的主面板
             DashboardScreen().launch(context, isNewTask: true);
           } else {
-            // DeliveryDashBoard().launch(context, isNewTask: true);
+            // 跳转到配送员的主面板
             DHomeFragment().launch(context, isNewTask: true);
           }
         } else {
+          // 跳转到验证列表页面
           VerificationListScreen().launch(context, isNewTask: true);
-          // VerificationScreen().launch(context, isNewTask: true);
         }
       } else {
+        // 跳转到用户城市选择页面
         UserCitySelectScreen().launch(context, isNewTask: true);
       }
     }).catchError((error) {
@@ -332,12 +349,11 @@ class LoginScreenState extends State<LoginScreen> {
                   8.height,
                   AppTextField(
                     controller: emailController,
-                    textFieldType: TextFieldType.EMAIL,
+                    textFieldType: TextFieldType.NAME, // Changed from EMAIL to NAME to remove email format restriction
                     focus: emailFocus,
                     nextFocus: passFocus,
                     decoration: commonInputDecoration(),
                     errorThisFieldRequired: language.fieldRequiredMsg,
-                    errorInvalidEmail: language.emailInvalid,
                   ),
                   16.height,
                   Text(language.password, style: primaryTextStyle()),

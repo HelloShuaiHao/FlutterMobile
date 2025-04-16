@@ -8,7 +8,9 @@ import 'package:logging/logging.dart';
 import 'package:mighty_delivery/extensions/shared_pref.dart';
 import 'package:mighty_delivery/main.dart';
 import 'package:mighty_delivery/main/utils/Constants.dart';
+import 'package:mighty_delivery/main/utils/storage.dart';
 import 'package:mighty_delivery/providers/helpers.dart';
+import '../main/network/http_utils.dart'; // Import HttpUtils
 
 enum LoginActions {
   update,
@@ -48,49 +50,34 @@ class MyAuthProvider with ChangeNotifier {
   }
 
   Future<Map<String, LoginActions>> login(String usernameOrEmail, String password, String serverUrl) async {
-  var response;
-  try {
-     response = await client.post(
-      makeUri(serverUrl, LOGIN_URL),
-      headers: {
-        HttpHeaders.contentTypeHeader: 'application/x-www-form-urlencoded',
-        HttpHeaders.userAgentHeader: 'PostmanRuntime/7.43.0',
-        HttpHeaders.acceptHeader: '*/*',
-        HttpHeaders.acceptEncodingHeader: 'gzip, deflate, br',
-        HttpHeaders.connectionHeader: 'keep-alive',
-        // 'Postman-Token': '<calculated when request is sent>',
-        // 'Host': '<calculated when request is sent>',
-        // 'Content-Length': '<calculated when request is sent>',
-      },
-      body: {
-        'client_id': 'External_Integration',
-        'client_secret': '3a165ec4-6a3f-a19e-657c-0739e26cb85e',
-        'grant_type': 'password',
-        'username': usernameOrEmail,
-        'password': password,
-        'scope': '',
-      }
-    );
-  } catch (error) {
-    _logger.severe('Login failed: $error');
-  }
+    try {
+      var response = await HttpUtils.post(
+        serverUrl,
+        data: {
+          'client_id': 'SimTech.Apex_App',
+          'grant_type': 'password',
+          'username': usernameOrEmail,
+          'password': password,
+          'scope': 'IdentityService AdministrationService StorageService PartnerService TransportService DeliveryService OrderService InventoryService MessagingService WorkflowService EngineService IntegrationService MobileService',
+        },
+      );
 
-    if (response.statusCode >= 400) {
-      _logger.severe('Login failed: ${response.body}');
+      if (response.code == 0) {
+        token = response.data['access_token'];
+        SpUtil.token.val = token!; // Save token using SpUtil
+        await HttpUtils.init(unAuthHandle: (){
+        });
+
+        print("token get:" + SpUtil.token.val);
+        SpUtil.setJSON(IS_LOGGED_IN, true); // Save login status using SpUtil
+        return {'action': LoginActions.update};
+      } else {
+        _logger.severe('Login failed: ${response.msg}');
+        return {'error': LoginActions.proceed};
+      }
+    } catch (error) {
+      _logger.severe('Login failed: $error');
       return {'error': LoginActions.proceed};
     }
-
-    final responseData = json.decode(response.body);
-    token = responseData['access_token'];
-
-    setValue(ACCESS_TOKEN, token);
-    setValue(IS_LOGGED_IN, true);
-
-    // Print responseData and token to the console
-    // print('Uri: ${makeUri(serverUrl, LOGIN_URL)}');
-    // print('Response Data: $responseData');
-    // print('Token: $token');
-    
-    return {'action': LoginActions.update};
   }
 }

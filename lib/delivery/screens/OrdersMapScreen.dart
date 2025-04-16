@@ -274,7 +274,7 @@ class _OrdersMapScreenState extends State<OrdersMapScreen> {
 
     // TODO
     var token = SpUtil.token.val;
-    SpUtil.token.val = "";
+    // SpUtil.token.val = "";
 
     // send the location to the server
     var r = await HttpUtils.post("/mobile/locations/create", data: {

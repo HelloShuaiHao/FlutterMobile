@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
+import 'package:mighty_delivery/main/screens/LoginScreen.dart';
 import '../../delivery/screens/AddDeliverymanVehicleScreen.dart';
 import '../../extensions/extension_util/context_extensions.dart';
 import '../../extensions/extension_util/int_extensions.dart';
@@ -309,9 +310,12 @@ class DProfileFragmentState extends State<DProfileFragment> {
                             title: language.logoutConfirmationMsg,
                             positiveText: language.yes,
                             negativeText: language.no,
-                            onAccept: (c) {
-                              logout(context);
-                            },
+                            onAccept: (c) async {
+                            // 清除用户数据
+                            await logout(context);
+
+                            // 跳转到 LoginScreen 页面
+                            LoginScreen().launch(context, isNewTask: true);                            },
                           );
                         }).paddingAll(16),
                         FutureBuilder<PackageInfo>(

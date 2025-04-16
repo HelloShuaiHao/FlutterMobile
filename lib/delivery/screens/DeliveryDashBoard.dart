@@ -65,13 +65,13 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
     with WidgetsBindingObserver {
   List<String> statusList = [
     ORDER_ASSIGNED,
-    ORDER_ACCEPTED,
-    ORDER_ARRIVED,
+    // ORDER_ACCEPTED,
+    // ORDER_ARRIVED,
     ORDER_PICKED_UP,
-    ORDER_DEPARTED,
+    // ORDER_DEPARTED,
     ORDER_DELIVERED,
     ORDER_CANCELLED,
-    ORDER_SHIPPED
+    // ORDER_SHIPPED
   ];
   ScrollController scrollController = ScrollController();
   ScrollController scrollController1 = ScrollController();
@@ -224,7 +224,6 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
   // 测试：直接使用模拟数据，而不调用真实 API
   // getOrderListApiCall() async {
   //   print("getOrderListApiCall invoked");
-
   //   // 测试：直接使用模拟数据，而不调用真实 API
   //   final Map<String, dynamic> sampleData = {
   //     "pagination": {
@@ -319,17 +318,13 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
   //     "all_unread_count": 0,
   //     "wallet_data": null
   //   };
-
   //   try {
   //     appStore.setLoading(true);
-
   //     // 使用 OrderListModel.fromJson() 进行解析
   //     var orderListModel = OrderListModel.fromJson(toStringKeyMap(sampleData));
-      
   //     // 更新分页信息
   //     currentPage = orderListModel.pagination?.currentPage ?? 1;
-  //     totalPage = orderListModel.pagination?.totalPages ?? 1;
-      
+  //     totalPage = orderListModel.pagination?.totalPages ?? 1;    
   //     // 清空以前的数据并添加新的数据
   //     orderData.clear();
   //     orderData.addAll(orderListModel.data ?? []);
@@ -338,7 +333,6 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
   //   } finally {
   //     appStore.setLoading(false);
   //   }
-
   //   setState(() {});
   //   // appStore.setLoading(false);
   // }
@@ -439,7 +433,8 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
         preferredSize: Size(context.width(), 110),
         child: commonAppBarWidget(
           '${language.hey} ${getStringAsync(NAME)} 👋',
-          showBack: false,
+          center: true,
+          showBack: true,
           actions: [
             // Container(
             //   margin: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -732,37 +727,32 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                   ); // 每种卡片具体的控制逻辑
                 }).visible(data.status == ORDER_ASSIGNED),
                 (statusList[selectedStatusIndex] == ORDER_ASSIGNED)
-                    ? Container(
-                        decoration: boxDecorationWithRoundedCorners(
-                            borderRadius: BorderRadius.circular(defaultRadius),
-                            border: Border.all(color: ColorUtils.colorPrimary),
-                            backgroundColor: ColorUtils.colorPrimary),
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                        child: Icon(
-                          Icons.check,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ).onTap(() {
-                        showConfirmDialogCustom(
-                          context,
-                          primaryColor: ColorUtils.colorPrimary,
-                          dialogType: DialogType.CONFIRMATION,
-                          title: orderTitle(statusList[selectedStatusIndex]),
-                          positiveText: language.yes,
-                          negativeText: language.no,
-                          onAccept: (c) async {
-                            appStore.setLoading(true);
-                            await onTapData(
+                    ? AppButton(
+                        elevation: 0,
+                        text: buttonText(statusList[selectedStatusIndex]), // 使用 buttonText 方法
+                        padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                        textStyle: boldTextStyle(color: Colors.white, size: 14),
+                        color: ColorUtils.colorPrimary,
+                        onTap: () {
+                          showConfirmDialogCustom(
+                            context,
+                            primaryColor: ColorUtils.colorPrimary,
+                            dialogType: DialogType.CONFIRMATION,
+                            title: orderTitle(statusList[selectedStatusIndex]),
+                            positiveText: language.yes,
+                            negativeText: language.no,
+                            onAccept: (c) async {
+                              appStore.setLoading(true);
+                              await onTapData(
                                 orderData: data,
-                                orderStatus: statusList[selectedStatusIndex]);
-                            appStore.setLoading(false);
-                            // finish(context);
-                          },
-                        );
-                      }).paddingSymmetric(horizontal: 5)
-                    : SizedBox(),
+                                orderStatus: statusList[selectedStatusIndex],
+                              );
+                              appStore.setLoading(false);
+                            },
+                          );
+                        },
+                      ).paddingSymmetric(horizontal: 5):
+                    SizedBox(), // 使用 SizedBox() 代替空的 Container
                 (statusList[selectedStatusIndex] != ORDER_CANCELLED &&
                         statusList[selectedStatusIndex] != ORDER_ASSIGNED)
                     ? AppButton(
@@ -1173,7 +1163,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(data.parcelType.validate(), style: boldTextStyle()),
+                    // Text(data.parcelType.validate(), style: boldTextStyle()),
                     4.height,
                     Row(
                       children: [
@@ -1182,8 +1172,8 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                     style: secondaryTextStyle())
                                 .expand()
                             : SizedBox(),
-                        Text('${printAmount(data.totalAmount ?? 0)}',
-                            style: boldTextStyle()),
+                        // Text('${printAmount(data.totalAmount ?? 0)}',
+                        //     style: boldTextStyle()),
                       ],
                     ),
                   ],
@@ -1323,13 +1313,13 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
 
   buttonText(String orderStatus) {
     if (orderStatus == ORDER_ASSIGNED) {
-      return language.accept;
+      return language.pickUp;
     } else if (orderStatus == ORDER_ACCEPTED) {
       return language.pickUp;
     } else if (orderStatus == ORDER_ARRIVED) {
       return language.pickUp;
     } else if (orderStatus == ORDER_PICKED_UP) {
-      return language.departed;
+      return language.confirmDelivery;
     } else if (orderStatus == ORDER_DEPARTED) {
       return language.confirmDelivery;
     }

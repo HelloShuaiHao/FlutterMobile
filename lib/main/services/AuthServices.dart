@@ -242,7 +242,7 @@ class AuthServices {
   // 2025-03-08 test 自定义登录
   Future<void> signInWithEmailPassword(context,
       {required String email, required String password}) async {
-    await _myAuth.login(email, password, 'https://localhost:7600').then((value) async {
+    await _myAuth.login(email, password, 'https://localhost:7600/connect/token').then((value) async {
       appStore.setLoading(true);
       // appStore.setLoading(false);
     }).catchError((e) {

@@ -48,7 +48,7 @@ class HttpUtils {
       if (authorization == null || authorization.isEmpty) {
         // 注意这里 defaultValue 和 val 的区别
         // defaultValue 是默认值，val 是获取值
-        options.headers['Authorization'] = 'Bearer ${SpUtil.token.defaultValue}';
+        options.headers['Authorization'] = 'Bearer ${SpUtil.token.val}';
       }
 
       String packageName = packageInfo.packageName;
@@ -162,28 +162,38 @@ class HttpUtils {
     data,
     Options? options,
     bool loadingDialog = false,
+    bool showErrorTip = true,
   }) async {
     if (loadingDialog) {
       showLoading();
     }
     try {
-      print("---------------Path: $path");
+      // Ensure Content-Type is set to application/x-www-form-urlencoded
+      options ??= Options(
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      );
+
       var response = await dio.post(
         path,
         data: data,
         options: options,
       );
-      var entity = ResponseEntity<T>.fromJson(response.data);
-      if (entity.code == 0) {
-        return entity;
-      } else {
-        showError(entity.msg);
-        return ResponseEntity<T>.fromJson({
-          "code": 500,
-        });
-      }
+
+      // Wrap the response data
+      Map<String, dynamic> wrappedData = {
+        "code": 0,
+        "msg": "success",
+        "data": response.data,
+      };
+
+      var entity = ResponseEntity<T>.fromJson(wrappedData);
+      return entity;
     } catch (e) {
-      showError("网络错误");
+      if (showErrorTip) {
+        showError("网络错误");
+      }
       return ResponseEntity<T>.fromJson({
         "code": 500,
       });

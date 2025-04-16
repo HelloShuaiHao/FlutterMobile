@@ -5,6 +5,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:intl/intl.dart';
+import 'package:mighty_delivery/main/network/http_utils.dart';
+import 'package:mighty_delivery/main/utils/storage.dart';
 import '../../extensions/extension_util/int_extensions.dart';
 import '../../extensions/extension_util/string_extensions.dart';
 import '../../extensions/extension_util/widget_extensions.dart';
@@ -153,6 +155,9 @@ Future<LoginResponse> logInApi(Map request, {bool isSocialLogin = false}) async 
 
 Future<void> logout(BuildContext context, {bool isFromLogin = false, bool isDeleteAccount = false, bool isVerification = false}) async {
   clearData() async {
+    SpUtil.token.val = '';
+    await HttpUtils.init(unAuthHandle: (){});
+
     await removeKey(USER_ID);
     await removeKey(NAME);
     await removeKey(USER_TOKEN);
@@ -170,16 +175,16 @@ Future<void> logout(BuildContext context, {bool isFromLogin = false, bool isDele
     await removeKey(FILTER_DATA);
     await removeKey(IS_VERIFIED_DELIVERY_MAN);
     await removeKey(OTP_VERIFIED);
-    if (!getBoolAsync(REMEMBER_ME)) {
-      await removeKey(USER_EMAIL);
-      await removeKey(USER_PASSWORD);
-    }
-    if (getStringAsync(LOGIN_TYPE) == LoginTypeGoogle) {
-      await removeKey(USER_EMAIL);
-      await removeKey(USER_PASSWORD);
-      await removeKey(LOGIN_TYPE);
-      await removeKey(REMEMBER_ME);
-    }
+    // if (!getBoolAsync(REMEMBER_ME)) {
+    //   await removeKey(USER_EMAIL);
+    //   await removeKey(USER_PASSWORD);
+    // }
+    // if (getStringAsync(LOGIN_TYPE) == LoginTypeGoogle) {
+    //   await removeKey(USER_EMAIL);
+    //   await removeKey(USER_PASSWORD);
+    //   await removeKey(LOGIN_TYPE);
+    //   await removeKey(REMEMBER_ME);
+    // }
 
     await appStore.setLogin(false);
     appStore.setFiltering(false);
@@ -204,13 +209,15 @@ Future<void> logout(BuildContext context, {bool isFromLogin = false, bool isDele
     LoginScreen().launch(context, isNewTask: true);
   } else {
     appStore.setLoading(true);
-    await logoutApi().then((value) async {
-      clearData();
-      appStore.setLoading(false);
-    }).catchError((e) {
-      appStore.setLoading(false);
-      throw e.toString();
-    });
+    clearData();
+    appStore.setLoading(false);
+    // await logoutApi().then((value) async {
+    //   clearData();
+    //   appStore.setLoading(false);
+    // }).catchError((e) {
+    //   appStore.setLoading(false);
+    //   throw e.toString();
+    // });
   }
 }
 

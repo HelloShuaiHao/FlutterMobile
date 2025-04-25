@@ -433,8 +433,8 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
         preferredSize: Size(context.width(), 110),
         child: commonAppBarWidget(
           '${language.hey} ${getStringAsync(NAME)} 👋',
-          center: true,
-          showBack: true,
+          showBack: true, // Enable the back button
+          center: true, // Center the title
           actions: [
             // Container(
             //   margin: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -637,7 +637,6 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
           OrdersMapScreen().launch(context);
         },
       ).paddingAll(10),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
     );
   }
 
@@ -774,7 +773,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                 orderData: data,
                                 orderStatus: statusList[selectedStatusIndex]);
                           } else if (statusList[selectedStatusIndex] ==
-                              ORDER_DEPARTED) {
+                              ORDER_DEPARTED || statusList[selectedStatusIndex] == ORDER_PICKED_UP) {
                             int val = 0;
                             return showInDialog(
                               barrierDismissible: true,

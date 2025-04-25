@@ -1,0 +1,105 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
+}
+//def localProperties = new Properties()
+//def localPropertiesFile = rootProject.file('local.properties')
+//if (localPropertiesFile.exists()) {
+//    localPropertiesFile.withReader('UTF-8') { reader ->
+//        localProperties.load(reader)
+//    }
+//}
+
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    namespace = "com.mighty.delivery"
+//    signingConfigs {
+//         release {
+//             storeFile file('/home/meet09/Downloads/local_delivery.jks')
+//             storePassword 'local_delivery'
+//             keyAlias 'local_delivery'
+//             keyPassword 'local_delivery'
+//         }
+//     }
+
+    signingConfigs {
+        release {
+            keyAlias = keystoreProperties['keyAlias']
+            keyPassword = keystoreProperties['keyPassword']
+            storeFile = keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+            storePassword = keystoreProperties['storePassword']
+        }
+    }
+    compileSdkVersion 34
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'  // Set Kotlin JVM target to 17
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    defaultConfig {
+        applicationId "com.mighty.delivery"
+        minSdkVersion 31
+        targetSdkVersion 34
+        versionCode 50
+        versionName '6.0.0'
+        multiDexEnabled true
+
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+            shrinkResources false
+        }
+    }
+
+    packagingOptions {
+        resources.excludes.add("META-INF/*")
+    }
+
+    googleServices { disableVersionCheck = true }
+
+    lintOptions {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+
+    // added by shuai
+    configurations{
+    all*.exclude module: 'bcprov-jdk15on'
+    }   
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.0"
+    implementation platform('com.google.firebase:firebase-bom:32.7.2')
+    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation 'androidx.browser:browser:1.3.0'
+    implementation('com.braintreepayments.api:drop-in:5.2.1') {
+        exclude group: "org.jfrog.cardinalcommerce.gradle", module: "cardinalmobilesdk"
+    }
+    implementation "org.jfrog.cardinalcommerce.gradle:cardinalmobilesdk:2.2.7-2"
+
+}

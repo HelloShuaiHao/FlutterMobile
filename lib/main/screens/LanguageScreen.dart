@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+import 'package:mighty_delivery/languageConfiguration/LanguageDefaultJson.dart';
+import 'package:mighty_delivery/main/utils/dynamic_theme.dart';
 import '../../extensions/extension_util/int_extensions.dart';
 import '../../extensions/extension_util/string_extensions.dart';
 import '../../extensions/extension_util/widget_extensions.dart';
@@ -11,11 +13,8 @@ import '../../extensions/shared_pref.dart';
 import '../../extensions/system_utils.dart';
 import '../../extensions/text_styles.dart';
 import '../../languageConfiguration/LanguageDataConstant.dart';
-import '../../languageConfiguration/LanguageDefaultJson.dart';
-import '../../languageConfiguration/ServerLanguageResponse.dart';
 import '../../main.dart';
 import '../components/CommonScaffoldComponent.dart';
-import '../utils/dynamic_theme.dart';
 
 class LanguageScreen extends StatefulWidget {
   static String tag = '/LanguageScreen';
@@ -25,7 +24,10 @@ class LanguageScreen extends StatefulWidget {
 }
 
 class LanguageScreenState extends State<LanguageScreen> {
-  // int? currentIndex = 0;
+  final List<Map<String, String>> languages = [
+    {"languageCode": "en", "languageName": "English"},
+    {"languageCode": "zh", "languageName": "中文"},
+  ];
 
   @override
   void setState(fn) {
@@ -42,41 +44,39 @@ class LanguageScreenState extends State<LanguageScreen> {
   @override
   Widget build(BuildContext context) {
     return CommonScaffoldComponent(
-      appBarTitle: language.language,
+      appBarTitle: "Select Language",
       body: AnimatedScrollView(
         padding: EdgeInsets.all(8),
-        children: List.generate(defaultServerLanguageData!.length, (index) {
-          LanguageJsonData data = defaultServerLanguageData![index];
+        children: List.generate(languages.length, (index) {
+          Map<String, String> data = languages[index];
+          String languageCode = data["languageCode"]!;
+          String languageName = data["languageName"]!;
+
           return Container(
             margin: EdgeInsets.all(8),
             decoration: boxDecorationWithRoundedCorners(
-                backgroundColor: Colors.transparent,
-                border: Border.all(
-                    color: getStringAsync(SELECTED_LANGUAGE_COUNTRY_CODE, defaultValue: defaultCountryCode) ==
-                            data.countryCode
-                        ? ColorUtils.colorPrimary
-                        : ColorUtils.dividerColor)),
+              backgroundColor: Colors.transparent,
+              border: Border.all(
+                color: getStringAsync(SELECTED_LANGUAGE_CODE, defaultValue: defaultLanguageCode) == languageCode
+                    ? ColorUtils.colorPrimary
+                    : ColorUtils.dividerColor,
+              ),
+            ),
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Row(
               children: [
-                commonCachedNetworkImage(data.languageImage.validate(), width: 34, height: 34)
-                    .cornerRadiusWithClipRRect(4),
-                //Image.asset(data.languageName.validate(), width: 34, height: 34).cornerRadiusWithClipRRect(4),
-                8.width,
-                Text('${data.languageName.validate()}', style: primaryTextStyle()).expand(),
-                getStringAsync(SELECTED_LANGUAGE_COUNTRY_CODE, defaultValue: defaultCountryCode) == data.countryCode
+                Text(languageName, style: primaryTextStyle()).expand(),
+                getStringAsync(SELECTED_LANGUAGE_CODE, defaultValue: defaultLanguageCode) == languageCode
                     ? Icon(Ionicons.radio_button_on, size: 20, color: ColorUtils.colorPrimary)
                     : Icon(Ionicons.radio_button_off_sharp, size: 20, color: ColorUtils.dividerColor),
               ],
             ),
           ).onTap(() async {
-            await setValue(SELECTED_LANGUAGE_CODE, data.languageCode);
-            setValue(SELECTED_LANGUAGE_COUNTRY_CODE, data.countryCode);
-            selectedServerLanguageData = data;
-            setValue(IS_SELECTED_LANGUAGE_CHANGE, true);
-            appStore.setLanguage(data.languageCode!, context: context);
+            await setValue(SELECTED_LANGUAGE_CODE, languageCode);
+            selectedServerLanguageData = null; // 如果需要，可以清空其他语言数据
+            appStore.setLanguage(languageCode, context: context);
             setState(() {});
-            LiveStream().emit('UpdateLanguage');
+            LiveStream().emit('UpdateLanguage'); // 通知其他页面更新语言
             finish(context);
           }, splashColor: Colors.transparent, highlightColor: Colors.transparent);
         }),

@@ -96,20 +96,26 @@ class LanguageJsonData {
 class ContentData {
   int? keywordId;
   String? keywordName;
-  String? keywordValue;
+  Map<String, String>? keywordValue; // 修改为支持多语言的 Map
 
   ContentData({this.keywordId, this.keywordName, this.keywordValue});
 
   ContentData.fromJson(Map<String, dynamic> json) {
     keywordId = json['keyword_id'];
-
     keywordName = json['keyword_name'];
 
-    keywordValue = json['keyword_value'];
+    // 处理不同的数据结构
+    if (json['keyword_value'] is String) {
+      // 如果是字符串，转换为多语言格式
+      keywordValue = {'en': json['keyword_value']};
+    } else if (json['keyword_value'] is Map) {
+      // 如果已经是多语言格式，直接赋值
+      keywordValue = Map<String, String>.from(json['keyword_value']);
+    }
   }
 
   Map<String, dynamic> toJson() {
-    final Map<String, dynamic> data = new Map<String, dynamic>();
+    final Map<String, dynamic> data = {};
     data['keyword_id'] = this.keywordId;
     data['keyword_name'] = this.keywordName;
     data['keyword_value'] = this.keywordValue;

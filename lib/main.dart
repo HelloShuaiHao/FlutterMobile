@@ -67,6 +67,7 @@ void main() async {
     });
   } else {
     await Firebase.initializeApp(
+      name: "dev project",
       options: DefaultFirebaseOptions.currentPlatform,
     ).then((value) {
       FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;

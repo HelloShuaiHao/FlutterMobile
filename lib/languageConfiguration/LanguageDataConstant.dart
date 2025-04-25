@@ -20,17 +20,25 @@ const IS_SELECTED_LANGUAGE_CHANGE = 'isSelectedLanguageChange';
 Locale defaultLanguageLocale = Locale(defaultLanguageCode, defaultCountryCode);
 
 Locale setDefaultLocate() {
-  String getJsonData = getStringAsync(LanguageJsonDataRes, defaultValue: "");
-  if (getJsonData.isNotEmpty) {
-    ServerLanguageResponse languageSettings = ServerLanguageResponse.fromJson(json.decode(getJsonData.trim()));
-    if (languageSettings.data!.length > 0) {
-      defaultServerLanguageData = languageSettings.data;
-      performLanguageOperation(defaultServerLanguageData);
-    }
+  // 加载本地语言数据
+  initJsonFile(); // 确保本地语言数据已加载
+
+  // 如果本地语言数据存在，优先使用本地语言数据
+  if (defaultLanguageDataKeys.isNotEmpty) {
+    String selectedLanguageCode = getStringAsync(SELECTED_LANGUAGE_CODE, defaultValue: defaultLanguageCode);
+    defaultLanguageLocale = Locale(selectedLanguageCode, defaultCountryCode);
+    return defaultLanguageLocale;
   }
-  if (defaultServerLanguageData != null && defaultServerLanguageData!.length > 0) {
-    performLanguageOperation(defaultServerLanguageData);
-  }
+
+  // 如果本地语言数据为空，回退到服务器语言数据
+  // String getJsonData = getStringAsync(LanguageJsonDataRes, defaultValue: "");
+  // if (getJsonData.isNotEmpty) {
+  //   ServerLanguageResponse languageSettings = ServerLanguageResponse.fromJson(json.decode(getJsonData.trim()));
+  //   if (languageSettings.data!.isNotEmpty) {
+  //     defaultServerLanguageData = languageSettings.data;
+  //     performLanguageOperation(defaultServerLanguageData);
+  //   }
+  // }
 
   return defaultLanguageLocale;
 }
@@ -77,26 +85,40 @@ List<Locale> getSupportedLocales() {
 }
 
 String getContentValueFromKey(int keywordId) {
+  String selectedLanguageCode = getStringAsync(SELECTED_LANGUAGE_CODE, defaultValue: defaultLanguageCode);
+
   String defaultKeyValue = defaultKeyNotFoundValue;
   bool isFoundKey = false;
   // 优先从本地语言数据中查找
-  for (int index = 0; index < defaultLanguageDataKeys.length; index++) {
-    if (defaultLanguageDataKeys[index].keywordId == keywordId) {
-      defaultKeyValue = defaultLanguageDataKeys[index].keywordValue!;
-      isFoundKey = true;
-      break;
-    }
-  }
-  // 如果本地未找到，再从服务器语言数据中查找
-  if (!isFoundKey && selectedServerLanguageData != null) {
-    for (int index = 0; index < selectedServerLanguageData!.contentData!.length; index++) {
-      if (selectedServerLanguageData!.contentData![index].keywordId == keywordId) {
-        defaultKeyValue = selectedServerLanguageData!.contentData![index].keywordValue!;
-        isFoundKey = true;
-        break;
+  // for (int index = 0; index < defaultLanguageDataKeys.length; index++) {
+  //   if (defaultLanguageDataKeys[index].keywordId == keywordId) {
+  //     defaultKeyValue = defaultLanguageDataKeys[index].keywordValue!;
+  //     isFoundKey = true;
+  //     break;
+  //   }
+  // }
+  
+  for (var content in defaultLanguageDataKeys) {
+    if (content.keywordId == keywordId) {
+      if (content.keywordValue != null && content.keywordValue!.containsKey(selectedLanguageCode)) {
+        return content.keywordValue![selectedLanguageCode]!;
       }
+      return content.keywordValue?['en'] ?? defaultKeyValue; // 默认返回英文
     }
   }
+
+  return "$defaultKeyValue ($keywordId)";
+
+  // 如果本地未找到，再从服务器语言数据中查找
+  // if (!isFoundKey && selectedServerLanguageData != null) {
+  //   for (int index = 0; index < selectedServerLanguageData!.contentData!.length; index++) {
+  //     if (selectedServerLanguageData!.contentData![index].keywordId == keywordId) {
+  //       defaultKeyValue = selectedServerLanguageData!.contentData![index].keywordValue!;
+  //       isFoundKey = true;
+  //       break;
+  //     }
+  //   }
+  // }
 
   // if (selectedServerLanguageData != null) {
   //   for (int index = 0; index < selectedServerLanguageData!.contentData!.length; index++) {
@@ -116,10 +138,10 @@ String getContentValueFromKey(int keywordId) {
   //   }
   // }
 
-  if (!isFoundKey) {
-    defaultKeyValue = defaultKeyValue + "($keywordId)";
-  }
-  return defaultKeyValue.toString().trim();
+  // if (!isFoundKey) {
+  //   defaultKeyValue = defaultKeyValue + "($keywordId)";
+  // }
+  // return defaultKeyValue.toString().trim();
 }
 
 initJsonFile() async {

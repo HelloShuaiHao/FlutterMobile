@@ -97,6 +97,7 @@ Future handleResponse(Response response, [bool? avoidTokenError]) async {
         throw TokenException(e);
       });
     } else {
+
       throw '';
     }
   }

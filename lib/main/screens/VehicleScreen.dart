@@ -10,20 +10,20 @@ class TestVehicleScreen extends StatefulWidget {
 
 class _TestVehicleScreenState extends State<TestVehicleScreen> {
   late Future<List<Map<String, dynamic>>> _futureVehicles;
-  
+
   @override
   void initState() {
     super.initState();
     print("当前进入 test_vehicle_screen.dart 页面");
     // 调用 getAllVehicles 方法获取数据
-    _futureVehicles = VehicleService().getAllVehicles(vehicleStatuses: [0, 1, 2]);
+    _futureVehicles =
+        VehicleService().getAllVehicles(vehicleStatuses: [0, 1, 2]);
   }
 
   void _fetchRoutePlans(String vehicleId) async {
     try {
-      final routePlans = await RoutePlanService().getRoutePlansByVehicleId(
-        vehicleId: vehicleId
-      );
+      final routePlans = await RoutePlanService()
+          .getRoutePlansByVehicleIdAndStatusCode(vehicleId: vehicleId);
 
       // 显示路线计划
       // showDialog 是 Flutter 中用于显示对话框的一个方法。
@@ -46,7 +46,7 @@ class _TestVehicleScreenState extends State<TestVehicleScreen> {
                 : Text("No route plans found"),
             actions: [
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),  // 关闭对话框
+                onPressed: () => Navigator.of(context).pop(), // 关闭对话框
                 child: Text("Close"),
               ),
             ],
@@ -59,7 +59,7 @@ class _TestVehicleScreenState extends State<TestVehicleScreen> {
         SnackBar(content: Text("Failed to fetch route plans")),
       );
     }
-  }  
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,10 +93,10 @@ class _TestVehicleScreenState extends State<TestVehicleScreen> {
                       "vehicleId",
                       vehicle['id'],
                     );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Vehicle ${vehicle['id']} saved"))
-                    );
-                    print("Vehicle ID in storage: " + SpUtil.getJSON("vehicleId"));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text("Vehicle ${vehicle['id']} saved")));
+                    print("Vehicle ID in storage: " +
+                        SpUtil.getJSON("vehicleId"));
 
                     _fetchRoutePlans(vehicle['id'].toString());
                   },

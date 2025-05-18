@@ -67,10 +67,11 @@ class LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
     print("当前进入 login_screen.dart 页面");
-    
+
     // 调用 getAllVehicles 方法获取数据
-    _futureVehicles = VehicleService().getAllVehicles(vehicleStatuses: [0, 1, 2]);
-    
+    _futureVehicles =
+        VehicleService().getAllVehicles(vehicleStatuses: [0, 1, 2]);
+
     init();
   }
 
@@ -92,7 +93,6 @@ class LoginScreenState extends State<LoginScreen> {
     if (mounted) super.setState(fn);
   }
 
-
   Future<void> loginApiCall() async {
     if (formKey.currentState!.validate()) {
       formKey.currentState!.save();
@@ -103,10 +103,10 @@ class LoginScreenState extends State<LoginScreen> {
         String email = Encryption.instance.encrypt(emailController.text.trim());
         String password =
             Encryption.instance.encrypt(passController.text.trim());
-        
+
         // String playerId =
         //     Encryption.instance.encrypt(getStringAsync(PLAYER_ID).validate());
-        
+
         String playerId = '';
 
         Map req = {
@@ -125,19 +125,18 @@ class LoginScreenState extends State<LoginScreen> {
             .signInWithEmailPassword(context,
                 email: emailController.text, password: passController.text)
             .then((value) async {
-              appStore.setLoading(false);
-              
-              // 登录成功后跳转到 DHomeFragment
-              DHomeFragment().launch(context, isNewTask: true);
-            })
-            .catchError((e) {
-              appStore.setLoading(false);
-              
-              // 登录失败时显示错误提示
-              toast("Login failed: ${e.toString()}");
-            });
+          appStore.setLoading(false);
 
-        // initial one      
+          // 登录成功后跳转到 DHomeFragment
+          DHomeFragment().launch(context, isNewTask: true);
+        }).catchError((e) {
+          appStore.setLoading(false);
+
+          // 登录失败时显示错误提示
+          toast("Login failed: ${e.toString()}");
+        });
+
+        // initial one
         await logInApi(req).then((v) async {
           authService
               .signInWithEmailPassword(context,
@@ -349,7 +348,8 @@ class LoginScreenState extends State<LoginScreen> {
                   8.height,
                   AppTextField(
                     controller: emailController,
-                    textFieldType: TextFieldType.NAME, // Changed from EMAIL to NAME to remove email format restriction
+                    textFieldType: TextFieldType
+                        .NAME, // Changed from EMAIL to NAME to remove email format restriction
                     focus: emailFocus,
                     nextFocus: passFocus,
                     decoration: commonInputDecoration(),
@@ -375,10 +375,11 @@ class LoginScreenState extends State<LoginScreen> {
                         return Center(child: CircularProgressIndicator());
                       } else if (snapshot.hasError) {
                         return Text('Error: ${snapshot.error}');
-                      } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                      } else if (snapshot.hasData &&
+                          snapshot.data!.isNotEmpty) {
                         return VehicleSelectionWidget(
                           items: snapshot.data!,
-                          selectedVehicleId: null, // 或者你可以根据需要选择已选车辆的 id
+                          selectedVehicleId: null,
                           onChanged: (selectedId) {
                             // 当用户选择车辆时，将返回选中车辆的 id
                             print("Selected vehicle id: $selectedId");
@@ -389,7 +390,7 @@ class LoginScreenState extends State<LoginScreen> {
                         return Text("No vehicles available");
                       }
                     },
-                  ), 
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -490,75 +491,75 @@ class LoginScreenState extends State<LoginScreen> {
                     width: context.width(),
                   ),
                   32.height,
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(language.doNotHaveAccount,
-                          style: primaryTextStyle()),
-                      4.width,
-                      Text(language.signUp,
-                              style:
-                                  boldTextStyle(color: ColorUtils.colorPrimary))
-                          .onTap(() {
-                        RegisterScreen(
-                          userType: CLIENT,
-                        ).launch(context,
-                            duration: Duration(milliseconds: 500),
-                            pageRouteAnimation: PageRouteAnimation.Slide);
-                      }),
-                    ],
-                  ),
-                  16.height,
-                  Row(
-                    children: [
-                      Spacer(),
-                      Divider().expand(),
-                      16.width,
-                      Text(language.signWith, style: secondaryTextStyle()),
-                      16.width,
-                      Divider().expand(),
-                      Spacer(),
-                    ],
-                  ),
-                  20.height,
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      OutlinedButton(
-                        child: Image.asset(ic_google, height: 30, width: 30),
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.all(12),
-                          shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(defaultRadius)),
-                          elevation: 0,
-                        ),
-                        onPressed: () {
-                          socialDialog(() {
-                            googleSignIn();
-                          });
-                        },
-                      ),
-                      if (isIOS) 8.width,
-                      if (isIOS)
-                        OutlinedButton(
-                          child: Image.asset(ic_apple, height: 30, width: 30),
-                          style: OutlinedButton.styleFrom(
-                            padding: EdgeInsets.all(12),
-                            shape: RoundedRectangleBorder(
-                                borderRadius:
-                                    BorderRadius.circular(defaultRadius)),
-                            elevation: 0,
-                          ),
-                          onPressed: () {
-                            socialDialog(() {
-                              appleLoginApi();
-                            });
-                          },
-                        ),
-                    ],
-                  ),
+                  // Row(
+                  //   mainAxisAlignment: MainAxisAlignment.center,
+                  //   children: [
+                  //     Text(language.doNotHaveAccount,
+                  //         style: primaryTextStyle()),
+                  //     4.width,
+                  //     Text(language.signUp,
+                  //             style:
+                  //                 boldTextStyle(color: ColorUtils.colorPrimary))
+                  //         .onTap(() {
+                  //       RegisterScreen(
+                  //         userType: CLIENT,
+                  //       ).launch(context,
+                  //           duration: Duration(milliseconds: 500),
+                  //           pageRouteAnimation: PageRouteAnimation.Slide);
+                  //     }),
+                  //   ],
+                  // ),
+                  // 16.height,
+                  // Row(
+                  //   children: [
+                  //     Spacer(),
+                  //     Divider().expand(),
+                  //     16.width,
+                  //     Text(language.signWith, style: secondaryTextStyle()),
+                  //     16.width,
+                  //     Divider().expand(),
+                  //     Spacer(),
+                  //   ],
+                  // ),
+                  // 20.height,
+                  // Row(
+                  //   crossAxisAlignment: CrossAxisAlignment.center,
+                  //   mainAxisAlignment: MainAxisAlignment.center,
+                  //   children: [
+                  //     OutlinedButton(
+                  //       child: Image.asset(ic_google, height: 30, width: 30),
+                  //       style: OutlinedButton.styleFrom(
+                  //         padding: EdgeInsets.all(12),
+                  //         shape: RoundedRectangleBorder(
+                  //             borderRadius:
+                  //                 BorderRadius.circular(defaultRadius)),
+                  //         elevation: 0,
+                  //       ),
+                  //       onPressed: () {
+                  //         socialDialog(() {
+                  //           googleSignIn();
+                  //         });
+                  //       },
+                  //     ),
+                  //     if (isIOS) 8.width,
+                  //     if (isIOS)
+                  //       OutlinedButton(
+                  //         child: Image.asset(ic_apple, height: 30, width: 30),
+                  //         style: OutlinedButton.styleFrom(
+                  //           padding: EdgeInsets.all(12),
+                  //           shape: RoundedRectangleBorder(
+                  //               borderRadius:
+                  //                   BorderRadius.circular(defaultRadius)),
+                  //           elevation: 0,
+                  //         ),
+                  //         onPressed: () {
+                  //           socialDialog(() {
+                  //             appleLoginApi();
+                  //           });
+                  //         },
+                  //       ),
+                  //   ],
+                  // ),
                 ],
               ),
             ),
@@ -567,30 +568,29 @@ class LoginScreenState extends State<LoginScreen> {
               builder: (context) => loaderWidget().visible(appStore.isLoading)),
         ],
       ),
-      bottomNavigationBar: Container(
-        color: appStore.isDarkMode
-            ? ColorUtils.scaffoldSecondaryDark
-            : ColorUtils.colorPrimaryLight,
-        padding: EdgeInsets.all(16),
-        child: appStore.isAllowDeliveryMan
-            ? Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text("${language.becomeADeliveryBoy}",
-                      style: primaryTextStyle()),
-                  4.width,
-                  Text(language.signUp,
-                          style: boldTextStyle(color: ColorUtils.colorPrimary))
-                      .onTap(() {
-
-                    RegisterScreen(userType: DELIVERY_MAN).launch(context,
-                        duration: Duration(milliseconds: 500),
-                        pageRouteAnimation: PageRouteAnimation.Slide);
-                  }),
-                ],
-              ).visible(appStore.isAllowDeliveryMan)
-            : SizedBox(),
-      ).visible(appStore.isAllowDeliveryMan),
+      // bottomNavigationBar: Container(
+      //   color: appStore.isDarkMode
+      //       ? ColorUtils.scaffoldSecondaryDark
+      //       : ColorUtils.colorPrimaryLight,
+      //   padding: EdgeInsets.all(16),
+      //   child: appStore.isAllowDeliveryMan
+      //       ? Row(
+      //           mainAxisAlignment: MainAxisAlignment.center,
+      //           children: [
+      //             Text("${language.becomeADeliveryBoy}",
+      //                 style: primaryTextStyle()),
+      //             4.width,
+      //             Text(language.signUp,
+      //                     style: boldTextStyle(color: ColorUtils.colorPrimary))
+      //                 .onTap(() {
+      //               RegisterScreen(userType: DELIVERY_MAN).launch(context,
+      //                   duration: Duration(milliseconds: 500),
+      //                   pageRouteAnimation: PageRouteAnimation.Slide);
+      //             }),
+      //           ],
+      //         ).visible(appStore.isAllowDeliveryMan)
+      //       : SizedBox(),
+      // ).visible(appStore.isAllowDeliveryMan),
     );
   }
 

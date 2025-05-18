@@ -161,8 +161,14 @@ abstract class _AppStore with Store {
   Future<void> setLanguage(String aCode, {BuildContext? context}) async {
     setDefaultLocate();
     selectedLanguage = aCode;
-    if (context != null) language = BaseLanguage.of(context)!;
-    language = (await AppLocalizations().load(Locale(selectedLanguage)));
+
+    if (context != null) {
+      language = BaseLanguage.of(context) ?? language; // 添加空值检查
+    }
+
+    final loadedLanguage =
+        await AppLocalizations().load(Locale(selectedLanguage));
+    language = loadedLanguage;
   }
 
   @action

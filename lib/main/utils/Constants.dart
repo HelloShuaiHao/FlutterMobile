@@ -5,7 +5,7 @@ import '../../extensions/extension_util/int_extensions.dart';
 import '../../extensions/colors.dart';
 import '../../extensions/common.dart';
 
-const mAppName = 'Mighty Delivery';
+const mAppName = 'LPT';
 //endregion
 
 //region Baseurl
@@ -13,7 +13,8 @@ const mAppName = 'Mighty Delivery';
 //live
 //const DOMAIN_URL = 'https://meetmighty.com/mobile/delivery-admin'; // Don't add slash at the end of the url
 //test
-const DOMAIN_URL = 'https://meetmighty.com/mobile/delivery-admin'; // Don't add slash at the end of the url
+const DOMAIN_URL =
+    'https://meetmighty.com/mobile/delivery-admin'; // Don't add slash at the end of the url
 // Don't add slash at the end of the url
 //endregion
 
@@ -349,11 +350,12 @@ const STATUS_PENDING = 'pending';
 const STATUS_IN_REVIEW = 'inreview';
 const STATUS_REJECTED = 'reject';
 
-
 // apex
 const ACCESS_TOKEN = 'ACCESS_TOKEN';
-const MY_DOMAIN_URL = 'https://localhost'; // Don't add slash at the end of the url
+const MY_DOMAIN_URL =
+    'https://localhost'; // Don't add slash at the end of the url
 const MY_IDENTITY_PORT = '7500';
 const MY_MOBILE_PORT = '7013';
 const MY_Base_Url = "$MY_DOMAIN_URL" + ":$MY_IDENTITY_PORT/api/";
-const MY_SIGNALR_BASE_URL = "$MY_DOMAIN_URL" + ":$MY_MOBILE_PORT" + "/signalr-hubs/messaging";
+const MY_SIGNALR_BASE_URL =
+    "$MY_DOMAIN_URL" + ":$MY_MOBILE_PORT" + "/signalr-hubs/messaging";

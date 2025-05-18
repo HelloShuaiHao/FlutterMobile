@@ -8,8 +8,10 @@ import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
+import 'package:mighty_delivery/main/models/GroupedOrderData.dart';
 
 import 'package:mighty_delivery/main/services/RoutePlanService.dart';
+import 'package:mighty_delivery/main/utils/storage.dart';
 
 import '../../delivery/screens/OrdersMapScreen.dart';
 import '../../extensions/app_text_field.dart';
@@ -49,7 +51,8 @@ import '../../user/screens/OrderDetailScreen.dart';
 import 'ReceivedScreenOrderScreen.dart';
 
 // background geolocation
-import 'package:flutter_background_geolocation/flutter_background_geolocation.dart' as bg;
+import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
+    as bg;
 
 class DeliveryDashBoard extends StatefulWidget {
   final int selectedIndex;
@@ -65,13 +68,9 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
     with WidgetsBindingObserver {
   List<String> statusList = [
     ORDER_ASSIGNED,
-    // ORDER_ACCEPTED,
-    // ORDER_ARRIVED,
     ORDER_PICKED_UP,
-    // ORDER_DEPARTED,
     ORDER_DELIVERED,
     ORDER_CANCELLED,
-    // ORDER_SHIPPED
   ];
   ScrollController scrollController = ScrollController();
   ScrollController scrollController1 = ScrollController();
@@ -80,6 +79,8 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
   int totalPage = 1;
   int selectedStatusIndex = 0;
   List<OrderData> orderData = [];
+  List<GroupedOrderData> groupedOrderDataList = []; // 分组数据
+
   // List<NewOrderData> orderData = []; // change type to var
   GlobalKey<FormState> rescheduleFormKey = GlobalKey<FormState>();
   TextEditingController reasonTitleTextEditingController =
@@ -104,28 +105,28 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
       setState(() {});
     });
     selectedStatusIndex = widget.selectedIndex;
-    await getAppSetting().then((value) {
-      print(
-          "-------------------------------${value.otpVerifyOnPickupDelivery}");
-      appStore
-          .setOtpVerifyOnPickupDelivery(value.otpVerifyOnPickupDelivery == 1);
-      appStore.setCurrencyCode(value.currencyCode ?? CURRENCY_CODE);
-      appStore.setCurrencySymbol(value.currency ?? CURRENCY_SYMBOL);
-      appStore.setCurrencyPosition(
-          value.currencyPosition ?? CURRENCY_POSITION_LEFT);
-      appStore.isVehicleOrder = value.isVehicleInOrder ?? 0;
-      appStore.setSiteEmail(value.siteEmail ?? "");
-      appStore.setCopyRight(value.siteCopyright ?? "");
-      //   appStore.setOrderTrackingIdPrefix(value.orderTrackingIdPrefix ?? "");
-      appStore.setIsInsuranceAllowed(value.isInsuranceAllowed ?? "0");
-      appStore.setInsurancePercentage(value.insurancePercentage ?? "0");
-      appStore.setInsuranceDescription(value.insuranceDescription ?? "");
-      appStore.setMaxAmountPerMonth(value.maxEarningsPerMonth ?? '');
-      appStore.setClaimDuration(value.claimDuration ?? "");
-      // setValue(IS_VERIFIED_DELIVERY_MAN, (value.isVerifiedDeliveryMan.validate() == 1));
-    }).catchError((error) {
-      log(error.toString());
-    });
+    // await getAppSetting().then((value) {
+    //   print(
+    //       "-------------------------------${value.otpVerifyOnPickupDelivery}");
+    //   appStore
+    //       .setOtpVerifyOnPickupDelivery(value.otpVerifyOnPickupDelivery == 1);
+    //   appStore.setCurrencyCode(value.currencyCode ?? CURRENCY_CODE);
+    //   appStore.setCurrencySymbol(value.currency ?? CURRENCY_SYMBOL);
+    //   appStore.setCurrencyPosition(
+    //       value.currencyPosition ?? CURRENCY_POSITION_LEFT);
+    //   appStore.isVehicleOrder = value.isVehicleInOrder ?? 0;
+    //   appStore.setSiteEmail(value.siteEmail ?? "");
+    //   appStore.setCopyRight(value.siteCopyright ?? "");
+    //   //   appStore.setOrderTrackingIdPrefix(value.orderTrackingIdPrefix ?? "");
+    //   appStore.setIsInsuranceAllowed(value.isInsuranceAllowed ?? "0");
+    //   appStore.setInsurancePercentage(value.insurancePercentage ?? "0");
+    //   appStore.setInsuranceDescription(value.insuranceDescription ?? "");
+    //   appStore.setMaxAmountPerMonth(value.maxEarningsPerMonth ?? '');
+    //   appStore.setClaimDuration(value.claimDuration ?? "");
+    //   // setValue(IS_VERIFIED_DELIVERY_MAN, (value.isVerifiedDeliveryMan.validate() == 1));
+    // }).catchError((error) {
+    //   log(error.toString());
+    // });
     if (await checkPermission()) {
       await checkLocationPermission(context);
     }
@@ -167,14 +168,10 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
         event.longitude,
       );
       try {
-        if (placeMarks.isNotEmpty)
-          updateUserStatus({
-            "id": getIntAsync(USER_ID),
-            "latitude": event.latitude.toString(),
-            "longitude": event.longitude.toString(),
-          }).then((value) {
-            log("value...." + value.toString());
-          });
+        if (placeMarks.isNotEmpty) {
+          // 停止调用 updateUserStatus
+          log("位置更新：纬度 ${event.latitude}, 经度 ${event.longitude}");
+        }
       } catch (e) {}
     });
   }
@@ -213,7 +210,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
   //     orderData.addAll(value.data!);
   //     // default
   //     setState(() {});
-  //     appStore.setLoading(false);    
+  //     appStore.setLoading(false);
   //   }).catchError((error) {
   //     log(error);
   //   }).whenComplete(() {
@@ -324,7 +321,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
   //     var orderListModel = OrderListModel.fromJson(toStringKeyMap(sampleData));
   //     // 更新分页信息
   //     currentPage = orderListModel.pagination?.currentPage ?? 1;
-  //     totalPage = orderListModel.pagination?.totalPages ?? 1;    
+  //     totalPage = orderListModel.pagination?.totalPages ?? 1;
   //     // 清空以前的数据并添加新的数据
   //     orderData.clear();
   //     orderData.addAll(orderListModel.data ?? []);
@@ -336,32 +333,36 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
   //   setState(() {});
   //   // appStore.setLoading(false);
   // }
-  
-  
-  // 使用固定ID测试
+
   getOrderListApiCall() async {
     print("getOrderListApiCall invoked");
 
     try {
       appStore.setLoading(true);
 
+      // 获取当前选中的状态
+      String selectedStatus = statusList[selectedStatusIndex];
+      String enumStatus = convertStatusToEnum(selectedStatus); // 转换为枚举字符串
+      int statusCode = convertStatusToInt(enumStatus); // 将枚举字符串转换为整数
+
       // 调用 RoutePlanService 获取数据
       final routePlanService = RoutePlanService();
-      final response = await routePlanService.getRoutePlansByVehicleId(
-        vehicleId: "3a18c3ac-681e-f5c0-c333-90f4e2cd006f",
+      final response =
+          await routePlanService.getRoutePlansByVehicleIdAndStatusCode(
+        vehicleId: SpUtil.getJSON("vehicleId"),
+        statusCode: statusCode, // 使用转换后的整数状态码
       );
 
       // 转换新格式为现有格式
-      final transformedResponse = routePlanService.transformNewResponseToExistingFormat({
+      final transformedResponse =
+          routePlanService.transformNewResponseToExistingFormat({
         "totalCount": response.length,
         "items": response,
       });
 
-      // 打印转换后的格式
-      print("Transformed Response: $transformedResponse");      
-
       // 使用 OrderListModel.fromJson() 解析数据
-      var orderListModel = OrderListModel.fromJson(toStringKeyMap(transformedResponse));
+      var orderListModel =
+          OrderListModel.fromJson(toStringKeyMap(transformedResponse));
 
       // 更新分页信息
       currentPage = orderListModel.pagination?.currentPage ?? 1;
@@ -370,6 +371,8 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
       // 清空以前的数据并添加新的数据
       orderData.clear();
       orderData.addAll(orderListModel.data ?? []);
+
+      groupOrderData(); // 分组数据
     } catch (e) {
       log("Error in getOrderListApiCall: $e");
     } finally {
@@ -377,6 +380,80 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
     }
 
     setState(() {});
+  }
+
+  String convertStatusToEnum(String status) {
+    switch (status) {
+      case ORDER_ASSIGNED:
+        return "Assigned";
+      case ORDER_PICKED_UP:
+        return "PickedUp";
+      case ORDER_DELIVERED:
+        return "Delivered";
+      case ORDER_CANCELLED:
+        return "Cancelled";
+      default:
+        throw Exception("Unknown status: $status");
+    }
+  }
+
+  int convertStatusToInt(String status) {
+    switch (status) {
+      case 'Draft':
+        return 0;
+      case 'Assigned':
+        return 1;
+      case 'Accepted':
+        return 2;
+      case 'PickedUp':
+        return 3;
+      case 'Departed':
+        return 4;
+      case 'Delivered':
+        return 5;
+      case 'Cancelled':
+        return 6;
+      case 'Shipped':
+        return 7;
+      case 'SelfDefined':
+        return 8;
+      default:
+        throw Exception('Unknown status: $status');
+    }
+  }
+
+  groupOrderData() async {
+    // 创建一个 Map，用于存储分类后的数据
+    Map<String, List<OrderData>> groupedOrders = {};
+    // 遍历 orderData 列表
+    for (var order in orderData) {
+      // 获取 businessEntityId
+      String? businessEntityId = order.pickupPoint?.businessEntityId;
+
+      // 如果 businessEntityId 为空，跳过该订单
+      if (businessEntityId == null) continue;
+
+      // 如果 Map 中不存在该 businessEntityId，则初始化一个空列表
+      if (!groupedOrders.containsKey(businessEntityId)) {
+        groupedOrders[businessEntityId] = [];
+      }
+
+      // 将订单添加到对应的 businessEntityId 的列表中
+      groupedOrders[businessEntityId]!.add(order);
+    }
+
+    // 将 Map 转换为 List<GroupedOrderData>
+    groupedOrderDataList = groupedOrders.entries.map((entry) {
+      return GroupedOrderData(
+        deliveryOrderId: entry.key, // 使用 businessEntityId 作为分组 ID
+        orders: entry.value, // 对应的订单列表
+      );
+    }).toList();
+
+    // 打印分类后的数据（可选）
+    print("Grouped Order Data: $groupedOrderDataList");
+
+    // this.groupedOrderDataList = groupedOrderDataList;
   }
 
   Map<String, dynamic> toStringKeyMap(Map<dynamic, dynamic> map) {
@@ -394,8 +471,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
       }
     });
     return result;
-  } 
-
+  }
 
   Future<void> cancelOrder(OrderData order) async {
     appStore.setLoading(true);
@@ -424,6 +500,21 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
     WidgetsBinding.instance.removeObserver(this);
     positionStream?.cancel();
     super.dispose();
+  }
+
+  void handleOrderAction(OrderData orderData, String orderStatus) async {
+    if (orderStatus == ORDER_ASSIGNED) {
+      print("Handling ORDER_ASSIGNED for order: ${orderData.id}");
+      await onTapData(orderStatus: ORDER_ACCEPTED, orderData: orderData);
+    } else if (orderStatus == ORDER_PICKED_UP) {
+      print("Handling ORDER_PICKED_UP for order: ${orderData.id}");
+      await onTapData(orderStatus: ORDER_DEPARTED, orderData: orderData);
+    } else if (orderStatus == ORDER_DEPARTED) {
+      print("Handling ORDER_DEPARTED for order: ${orderData.id}");
+      await onTapData(orderStatus: ORDER_DELIVERED, orderData: orderData);
+    } else {
+      print("Unhandled order status: $orderStatus");
+    }
   }
 
   @override
@@ -551,75 +642,335 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
               onPageChanged: (value) {
                 selectedStatusIndex =
                     statusList.indexWhere((item) => item == statusList[value]);
+
                 orderData.clear();
+
                 getOrderListApiCall();
+
                 setState(() {});
               },
               children: statusList.map((e) {
                 return Stack(
                   children: [
-                    AnimatedListView(
-                      itemCount: orderData.length,
-                      shrinkWrap: true,
-                      physics: BouncingScrollPhysics(),
-                      listAnimationType: ListAnimationType.Slide,
-                      padding: EdgeInsets.only(
-                          left: 16, right: 16, top: 16, bottom: 60),
-                      flipConfiguration: FlipConfiguration(
-                          duration: Duration(seconds: 1),
-                          curve: Curves.fastOutSlowIn),
-                      fadeInConfiguration: FadeInConfiguration(
-                          duration: Duration(seconds: 1),
-                          curve: Curves.fastOutSlowIn),
-                      onNextPage: () {
-                        if (currentPage < totalPage) {
-                          currentPage++;
-                          setState(() {});
-                          getOrderListApiCall();
-                        }
-                      },
-                      onSwipeRefresh: () async {
-                        currentPage = 1;
-                        await getAppSetting().then((value) {
-                          appStore.setOtpVerifyOnPickupDelivery(
-                              value.otpVerifyOnPickupDelivery == 1);
-                          appStore.setCurrencyCode(
-                              value.currencyCode ?? CURRENCY_CODE);
-                          appStore.setCurrencySymbol(
-                              value.currency ?? CURRENCY_SYMBOL);
-                          appStore.setCurrencyPosition(
-                              value.currencyPosition ?? CURRENCY_POSITION_LEFT);
-                          appStore.isVehicleOrder = value.isVehicleInOrder ?? 0;
-                          appStore.setSiteEmail(value.siteEmail ?? "");
-                          appStore.setCopyRight(value.siteCopyright ?? "");
-                          appStore.setIsInsuranceAllowed(
-                              value.isInsuranceAllowed ?? "0");
-                          appStore.setInsurancePercentage(
-                              value.insurancePercentage ?? "0");
-                          //   appStore.setOrderTrackingIdPrefix(value.orderTrackingIdPrefix ?? "");
-                          appStore.setInsuranceDescription(
-                              value.insuranceDescription ?? "");
-                          appStore.setMaxAmountPerMonth(
-                              value.maxEarningsPerMonth ?? '');
-                          appStore.setClaimDuration(value.claimDuration ?? '');
-                        }).catchError((error) {
-                          log(error.toString());
-                        });
-                        getOrderListApiCall();
-                        return Future.value(true);
-                      },
-                      itemBuilder: (context, i) {
-                        OrderData item = orderData[i];
-                        return item.status != ORDER_DRAFT
-                            ? orderCard(item)
-                            : SizedBox();
-                      },
-                    ).visible(orderData.length > 0),
-                    loaderWidget().visible(appStore.isLoading),
-                    emptyWidget()
-                        .visible(orderData.length <= 0 && !appStore.isLoading),
+                    groupedOrderDataList.isEmpty
+                        ? Center(
+                            child:
+                                CircularProgressIndicator(), // 如果没有数据，显示加载指示器
+                          )
+                        : SingleChildScrollView(
+                            child: ExpansionPanelList(
+                              expansionCallback: (int index, bool isExpanded) {
+                                isExpanded =
+                                    groupedOrderDataList[index].isExpanded;
+                                try {
+                                  print(
+                                      "Clicked group index: $index, isExpanded: $isExpanded"); // 打印当前分组索引和展开状态
+                                  setState(() {
+                                    // 切换分组的展开状态
+                                    groupedOrderDataList[index].isExpanded =
+                                        !isExpanded;
+                                    print(
+                                        "New isExpanded state: ${groupedOrderDataList[index].isExpanded}"); // 打印切换后的状态
+                                  });
+                                } catch (e, stackTrace) {
+                                  // 捕获并打印错误信息
+                                  print("Error in expansionCallback: $e");
+                                  print("StackTrace: $stackTrace");
+                                }
+                              },
+                              children: groupedOrderDataList.map((group) {
+                                return ExpansionPanel(
+                                  headerBuilder:
+                                      (BuildContext context, bool isExpanded) {
+                                    return ListTile(
+                                      title: Text(
+                                        "Group: ${group.deliveryOrderId ?? 'Unknown'}",
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      trailing: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: Icon(
+                                                Icons.check_circle_outline,
+                                                color: Colors.green), // 绿色勾号按钮
+                                            onPressed: () {
+                                              switch (statusList[
+                                                  selectedStatusIndex]) {
+                                                case ORDER_ASSIGNED:
+                                                  print(
+                                                      "Handling ORDER_ASSIGNED");
+                                                  showConfirmDialogCustom(
+                                                    context,
+                                                    primaryColor:
+                                                        ColorUtils.colorPrimary,
+                                                    dialogType:
+                                                        DialogType.CONFIRMATION,
+                                                    title: orderTitle(statusList[
+                                                        selectedStatusIndex]),
+                                                    positiveText: language.yes,
+                                                    negativeText: language.no,
+                                                    onAccept: (c) async {
+                                                      appStore.setLoading(true);
+                                                      appStore
+                                                          .setLoading(false);
+                                                    },
+                                                  );
+                                                  break;
+
+                                                case ORDER_PICKED_UP:
+                                                  print(
+                                                      "Handling ORDER_PICKED_UP");
+
+                                                  int val = 0;
+                                                  showInDialog(
+                                                    barrierDismissible: true,
+                                                    context,
+                                                    builder: (p0) {
+                                                      return StatefulBuilder(
+                                                        builder: (context,
+                                                            selectedImagesUpdate) {
+                                                          return Form(
+                                                            key:
+                                                                rescheduleFormKey,
+                                                            child:
+                                                                SingleChildScrollView(
+                                                              child: Container(
+                                                                child: !appStore
+                                                                        .isLoading
+                                                                    ? Column(
+                                                                        mainAxisSize:
+                                                                            MainAxisSize.min,
+                                                                        mainAxisAlignment:
+                                                                            MainAxisAlignment.start,
+                                                                        crossAxisAlignment:
+                                                                            CrossAxisAlignment.start,
+                                                                        children: [
+                                                                          Row(
+                                                                            children: [
+                                                                              // Reschedule button
+                                                                              commonButton(language.reschedule, size: 12, () {
+                                                                                selectedImagesUpdate(() {
+                                                                                  val = 1;
+                                                                                  print("$val"); // Make the reschedule form visible
+                                                                                });
+                                                                              }).expand(),
+
+                                                                              2.width,
+
+                                                                              // Confirm Delivery button
+                                                                              commonButton(language.confirmDelivery, size: 12, () async {
+                                                                                if (context.mounted) {
+                                                                                  Navigator.pop(context);
+                                                                                }
+                                                                                // onTapData(
+                                                                                //   orderData: data,
+                                                                                //   orderStatus: statusList[selectedStatusIndex],
+                                                                                // );
+                                                                              }).expand(),
+                                                                            ],
+                                                                          ).visible(val ==
+                                                                              0),
+
+                                                                          // Reschedule form
+                                                                          Column(
+                                                                            mainAxisAlignment:
+                                                                                MainAxisAlignment.start,
+                                                                            crossAxisAlignment:
+                                                                                CrossAxisAlignment.start,
+                                                                            children: [
+                                                                              Text(language.rescheduleTitle, style: boldTextStyle(), textAlign: TextAlign.start),
+                                                                              10.height,
+                                                                              Divider(color: dividerColor, height: 1),
+                                                                              8.height,
+
+                                                                              // Reason text field
+                                                                              Text(language.reason, style: boldTextStyle()),
+                                                                              12.height,
+                                                                              AppTextField(
+                                                                                isValidationRequired: true,
+                                                                                controller: reasonTitleTextEditingController,
+                                                                                textFieldType: TextFieldType.NAME,
+                                                                                errorThisFieldRequired: language.fieldRequiredMsg,
+                                                                                decoration: commonInputDecoration(hintText: language.reason),
+                                                                              ),
+                                                                              8.height,
+
+                                                                              // Date picker
+                                                                              Text(language.date, style: boldTextStyle()),
+                                                                              12.height,
+                                                                              DateTimePicker(
+                                                                                controller: pickDateController,
+                                                                                type: DateTimePickerType.date,
+                                                                                initialDate: DateTime.now(),
+                                                                                firstDate: DateTime.now(),
+                                                                                lastDate: DateTime.now().add(Duration(days: 30)),
+                                                                                onChanged: (value) {
+                                                                                  pickDate = DateTime.parse(value);
+                                                                                },
+                                                                                validator: (value) {
+                                                                                  if (value!.isEmpty) return language.fieldRequiredMsg;
+                                                                                  return null;
+                                                                                },
+                                                                                decoration: commonInputDecoration(suffixIcon: Icons.calendar_today, hintText: language.date),
+                                                                              ),
+
+                                                                              16.height,
+
+                                                                              // Buttons inside the reschedule form
+                                                                              Row(
+                                                                                children: [
+                                                                                  commonButton(language.cancel, size: 14, () {
+                                                                                    finish(context, 0); // Close the dialog
+                                                                                  }).expand(),
+
+                                                                                  6.width,
+
+                                                                                  // Reschedule button inside the form
+                                                                                  commonButton(language.reschedule, size: 14, () async {
+                                                                                    if (rescheduleFormKey.currentState!.validate()) {
+                                                                                      // Trigger the reschedule API call
+                                                                                      // Map request = {
+                                                                                      //   "order_id": data.id,
+                                                                                      //   "reason": reasonTitleTextEditingController.text.toString(),
+                                                                                      //   "date": DateFormat('yyyy-MM-dd').format(pickDate!),
+                                                                                      // };
+                                                                                      Map request = {};
+                                                                                      appStore.setLoading(true);
+                                                                                      await rescheduleOrder(request).then((value) {
+                                                                                        toast(value.message);
+                                                                                        appStore.setLoading(false);
+                                                                                        finish(context);
+                                                                                      });
+                                                                                    }
+                                                                                  }).expand(),
+                                                                                ],
+                                                                              ),
+                                                                            ],
+                                                                          ).visible(val ==
+                                                                              1),
+                                                                        ],
+                                                                      )
+                                                                    : Observer(
+                                                                        builder:
+                                                                            (context) =>
+                                                                                loaderWidget().visible(appStore.isLoading),
+                                                                      ).center(),
+                                                              ),
+                                                            ),
+                                                          );
+                                                        },
+                                                      );
+                                                    },
+                                                  );
+                                                  break;
+
+                                                case ORDER_DELIVERED:
+                                                  print(
+                                                      "Handling ORDER_DELIVERED");
+                                                  break;
+
+                                                case ORDER_CANCELLED:
+                                                  print(
+                                                      "Handling ORDER_CANCELLED");
+                                                  break;
+
+                                                default:
+                                                  print(
+                                                      "Unhandled status: ${statusList[selectedStatusIndex]}");
+                                                  break;
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                  body: Column(
+                                    children: group.orders!.map((order) {
+                                      return Container(
+                                        margin: EdgeInsets.symmetric(
+                                            horizontal: 16), // 增加左右两边的 margin
+                                        child: orderCard(order), // 渲染每个订单
+                                      );
+                                    }).toList(),
+                                  ),
+                                  isExpanded:
+                                      group.isExpanded, // 绑定 isExpanded 状态
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                    // loaderWidget().visible(appStore.isLoading), // 显示加载状态
+                    emptyWidget().visible(groupedOrderDataList.isEmpty &&
+                        !appStore.isLoading), // 显示空状态
                   ],
                 );
+                // return Stack(
+                //   children: [
+                //     AnimatedListView(
+                //       itemCount: orderData.length,
+                //       shrinkWrap: true,
+                //       physics: BouncingScrollPhysics(),
+                //       listAnimationType: ListAnimationType.Slide,
+                //       padding: EdgeInsets.only(
+                //           left: 16, right: 16, top: 16, bottom: 60),
+                //       flipConfiguration: FlipConfiguration(
+                //           duration: Duration(seconds: 1),
+                //           curve: Curves.fastOutSlowIn),
+                //       fadeInConfiguration: FadeInConfiguration(
+                //           duration: Duration(seconds: 1),
+                //           curve: Curves.fastOutSlowIn),
+                //       onNextPage: () {
+                //         if (currentPage < totalPage) {
+                //           currentPage++;
+                //           setState(() {});
+                //           getOrderListApiCall();
+                //         }
+                //       },
+                //       onSwipeRefresh: () async {
+                //         currentPage = 1;
+                //         await getAppSetting().then((value) {
+                //           appStore.setOtpVerifyOnPickupDelivery(
+                //               value.otpVerifyOnPickupDelivery == 1);
+                //           appStore.setCurrencyCode(
+                //               value.currencyCode ?? CURRENCY_CODE);
+                //           appStore.setCurrencySymbol(
+                //               value.currency ?? CURRENCY_SYMBOL);
+                //           appStore.setCurrencyPosition(
+                //               value.currencyPosition ?? CURRENCY_POSITION_LEFT);
+                //           appStore.isVehicleOrder = value.isVehicleInOrder ?? 0;
+                //           appStore.setSiteEmail(value.siteEmail ?? "");
+                //           appStore.setCopyRight(value.siteCopyright ?? "");
+                //           appStore.setIsInsuranceAllowed(
+                //               value.isInsuranceAllowed ?? "0");
+                //           appStore.setInsurancePercentage(
+                //               value.insurancePercentage ?? "0");
+                //           //   appStore.setOrderTrackingIdPrefix(value.orderTrackingIdPrefix ?? "");
+                //           appStore.setInsuranceDescription(
+                //               value.insuranceDescription ?? "");
+                //           appStore.setMaxAmountPerMonth(
+                //               value.maxEarningsPerMonth ?? '');
+                //           appStore.setClaimDuration(value.claimDuration ?? '');
+                //         }).catchError((error) {
+                //           log(error.toString());
+                //         });
+                //         getOrderListApiCall();
+                //         return Future.value(true);
+                //       },
+                //       itemBuilder: (context, i) {
+                //         OrderData item = orderData[i];
+                //         return item.status != ORDER_DRAFT
+                //             ? orderCard(item)
+                //             : SizedBox();
+                //       },
+                //     ).visible(orderData.length > 0),
+                //     loaderWidget().visible(appStore.isLoading),
+                //     emptyWidget()
+                //         .visible(orderData.length <= 0 && !appStore.isLoading),
+                //   ],
+                // );
               }).toList(),
             ),
           ],
@@ -662,7 +1013,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('${language.order} - ${data.id}',
-                              style: boldTextStyle(size: 14))
+                              style: boldTextStyle(size: 9))
                           .expand(),
                       Text('${data.orderTrackingId}',
                               style: boldTextStyle(
@@ -686,7 +1037,6 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                     color: ColorUtils.colorPrimary,
                     size: 28,
                   ),
-
                 )
                     .onTap(() {
                       openMap(
@@ -728,8 +1078,10 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                 (statusList[selectedStatusIndex] == ORDER_ASSIGNED)
                     ? AppButton(
                         elevation: 0,
-                        text: buttonText(statusList[selectedStatusIndex]), // 使用 buttonText 方法
-                        padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                        text: buttonText(statusList[
+                            selectedStatusIndex]), // 使用 buttonText 方法
+                        padding:
+                            EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                         textStyle: boldTextStyle(color: Colors.white, size: 14),
                         color: ColorUtils.colorPrimary,
                         onTap: () {
@@ -750,8 +1102,8 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                             },
                           );
                         },
-                      ).paddingSymmetric(horizontal: 5):
-                    SizedBox(), // 使用 SizedBox() 代替空的 Container
+                      ).paddingSymmetric(horizontal: 5)
+                    : SizedBox(), // 使用 SizedBox() 代替空的 Container
                 (statusList[selectedStatusIndex] != ORDER_CANCELLED &&
                         statusList[selectedStatusIndex] != ORDER_ASSIGNED)
                     ? AppButton(
@@ -773,7 +1125,9 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                 orderData: data,
                                 orderStatus: statusList[selectedStatusIndex]);
                           } else if (statusList[selectedStatusIndex] ==
-                              ORDER_DEPARTED || statusList[selectedStatusIndex] == ORDER_PICKED_UP) {
+                                  ORDER_DEPARTED ||
+                              statusList[selectedStatusIndex] ==
+                                  ORDER_PICKED_UP) {
                             int val = 0;
                             return showInDialog(
                               barrierDismissible: true,
@@ -1030,42 +1384,42 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                           style: secondaryTextStyle(size: 12)),
                     ],
                   ),
-                  4.height,
-                  Row(
-                    children: [
-                      Column(
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              // -----这里还需要修改，因为把id的int改成了string
-                              // OrderDetailScreen(orderId: data.id!).launch(context,
-                              //     pageRouteAnimation:
-                              //         PageRouteAnimation.SlideBottomTop,
-                              //     duration: 400.milliseconds);
-                            },
-                            child: Row(
-                              children: [
-                                ImageIcon(AssetImage(ic_from),
-                                    size: 24, color: ColorUtils.colorPrimary),
-                                12.width,
-                                Text('${data.pickupPoint!.address}',
-                                        style: primaryTextStyle(size: 14))
-                                    .expand(),
-                              ],
-                            ),
+                4.height,
+                Row(
+                  children: [
+                    Column(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            // -----这里还需要修改，因为把id的int改成了string
+                            // OrderDetailScreen(orderId: data.id!).launch(context,
+                            //     pageRouteAnimation:
+                            //         PageRouteAnimation.SlideBottomTop,
+                            //     duration: 400.milliseconds);
+                          },
+                          child: Row(
+                            children: [
+                              ImageIcon(AssetImage(ic_from),
+                                  size: 24, color: ColorUtils.colorPrimary),
+                              12.width,
+                              Text('${data.pickupPoint!.address}',
+                                      style: primaryTextStyle(size: 14))
+                                  .expand(),
+                            ],
                           ),
-                        ],
-                      ).expand(),
-                      12.width,
-                      if (data.pickupPoint!.contactNumber != null)
-                        Icon(Ionicons.ios_call_outline,
-                                size: 20, color: ColorUtils.colorPrimary)
-                            .onTap(() {
-                          commonLaunchUrl(
-                              'tel:${data.pickupPoint!.contactNumber}');
-                        }),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ).expand(),
+                    12.width,
+                    if (data.pickupPoint!.contactNumber != null)
+                      Icon(Ionicons.ios_call_outline,
+                              size: 20, color: ColorUtils.colorPrimary)
+                          .onTap(() {
+                        commonLaunchUrl(
+                            'tel:${data.pickupPoint!.contactNumber}');
+                      }),
+                  ],
+                ),
                 if (data.pickupDatetime == null &&
                     data.pickupPoint!.endTime != null &&
                     data.pickupPoint!.startTime != null)
@@ -1227,7 +1581,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
         ),
       ),
       onTap: () {
-        // ------这里还需要，因为把id的int改成了string 
+        // ------这里还需要，因为把id的int改成了string
         // OrderDetailScreen(orderId: data.id!).launch(context,
         //     pageRouteAnimation: PageRouteAnimation.SlideBottomTop,
         //     duration: 400.milliseconds);
@@ -1237,15 +1591,23 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
 
   Future<void> onTapData(
       {required String orderStatus, required OrderData orderData}) async {
+    final routePlanService = RoutePlanService();
+    // var enumStatusCode = convertStatusToEnum(orderStatus);
     if (orderStatus == ORDER_ASSIGNED) {
       FlutterRingtonePlayer().stop();
-      // -----这里还需要，因为把id的int改成了string
-      // await updateOrder(orderStatus: ORDER_ACCEPTED, orderId: orderData.id)
-      //     .then((value) {
-      //   toast(language.orderActiveSuccessfully);
-      // });
-      int i = statusList.indexWhere((item) => item == ORDER_ASSIGNED);
-      pageController.jumpToPage(i + 1);
+      await routePlanService.addTaskStatus(
+        taskId: orderData.id!, // 任务 ID
+        statusCode: "PickedUp", // 状态代码
+        name: "PickedUp",
+        senderMessage: "Your order has been assigned",
+        receiverMessage: "The order is now assigned to a delivery person",
+        colorHex: "#00FF00",
+      );
+
+      // 不进行跳转
+      // int i = statusList.indexWhere((item) => item == ORDER_ASSIGNED);
+      // pageController.jumpToPage(i + 1);
+
       getOrderListApiCall();
     } else if (orderStatus == ORDER_ACCEPTED) {
       DateTime startTime = DateTime.parse(orderData.pickupPoint!.startTime!);
@@ -1256,8 +1618,10 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
         // Allow the api call
         await ReceivedScreenOrderScreen(
                 orderData: orderData,
-                isShowPayment: orderData.paymentId == null && orderData.paymentCollectFrom == PAYMENT_ON_PICKUP)
-            .launch(context, pageRouteAnimation: PageRouteAnimation.SlideBottomTop);
+                isShowPayment: orderData.paymentId == null &&
+                    orderData.paymentCollectFrom == PAYMENT_ON_PICKUP)
+            .launch(context,
+                pageRouteAnimation: PageRouteAnimation.SlideBottomTop);
         int i = statusList.indexWhere((item) => item == ORDER_PICKED_UP);
         pageController.jumpToPage(i);
         getOrderListApiCall();
@@ -1281,13 +1645,18 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
       int i = statusList.indexWhere((item) => item == ORDER_ARRIVED);
       pageController.jumpToPage(i + 1);
     } else if (orderStatus == ORDER_PICKED_UP) {
-      // ------这里还需要修改，因为把id的int改成了string
-      // await updateOrder(orderStatus: ORDER_DEPARTED, orderId: orderData.id)
-      //     .then((value) {
-      //   toast(language.orderDepartedSuccessfully);
-      // });
-      int i = statusList.indexWhere((item) => item == ORDER_PICKED_UP);
-      pageController.jumpToPage(i + 1);
+      // 不进行跳转
+      // int i = statusList.indexWhere((item) => item == ORDER_PICKED_UP);
+      // pageController.jumpToPage(i + 1);
+      await routePlanService.addTaskStatus(
+        taskId: orderData.id!, // 任务 ID
+        statusCode: "Delivered", // 状态代码
+        name: "Delivered",
+        senderMessage: "Your order has been delivered",
+        receiverMessage: "The order is now completed",
+        colorHex: "#00FF00",
+      );
+
       getOrderListApiCall();
     } else if (orderStatus == ORDER_DEPARTED) {
       DateTime startTime = DateTime.parse(orderData.pickupDatetime!);

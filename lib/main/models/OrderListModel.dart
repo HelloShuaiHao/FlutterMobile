@@ -56,16 +56,19 @@ class PickupPoint {
   String? endTime;
   String? instruction;
 
+  String? businessEntityId;
+
   PickupPoint(
       {this.address,
-        this.name,
-        this.latitude,
-        this.longitude,
-        this.description,
-        this.contactNumber,
-        this.startTime,
-        this.instruction,
-        this.endTime});
+      this.name,
+      this.latitude,
+      this.longitude,
+      this.description,
+      this.contactNumber,
+      this.startTime,
+      this.instruction,
+      this.endTime,
+      this.businessEntityId});
 
   PickupPoint.fromJson(Map<String, dynamic> json) {
     name = json['name'];
@@ -77,6 +80,8 @@ class PickupPoint {
     contactNumber = json['contact_number'];
     startTime = json['start_time'];
     endTime = json['end_time'];
+
+    businessEntityId = json['businessEntityId'];
   }
 
   Map<String, dynamic> toJson() {
@@ -90,6 +95,8 @@ class PickupPoint {
     data['end_time'] = this.endTime;
     data['name'] = this.name;
     data['instruction'] = this.instruction;
+
+    data['businessEntityId'] = this.businessEntityId;
     return data;
   }
 }
@@ -110,9 +117,9 @@ class PackagingSymbol {
       );
 
   Map<String, dynamic> toJson() => {
-    "key": key,
-    "title": title,
-  };
+        "key": key,
+        "title": title,
+      };
 }
 
 // 订单基本信息
@@ -198,58 +205,58 @@ class OrderData {
   String? reScheduleDateTime;
   OrderData(
       {this.orderTrackingId,
-        this.id,
-        this.clientId,
-        this.clientName,
-        this.date,
-        this.pickupPoint,
-        this.deliveryPoint,
-        this.countryId,
-        this.countryName,
-        this.cityId,
-        this.cityName,
-        this.parcelType,
-        this.totalWeight,
-        this.totalDistance,
-        this.pickupDatetime,
-        this.deliveryDatetime,
-        this.parentOrderId,
-        this.status,
-        this.paymentId,
-        this.paymentType,
-        this.paymentStatus,
-        this.paymentCollectFrom,
-        this.deliveryManId,
-        this.deliveryManName,
-        this.fixedCharges,
-        this.extraCharges,
-        this.vehicleCharge,
-        this.totalAmount,
-        this.reason,
-        this.pickupConfirmByClient,
-        this.pickupConfirmByDeliveryMan,
-        this.pickupTimeSignature,
-        this.deliveryTimeSignature,
-        this.deletedAt,
-        this.returnOrderId,
-        this.weightCharge,
-        this.distanceCharge,
-        this.totalParcel,
-        this.autoAssign,
-        this.cancelledDeliverManIds,
-        this.vehicleId,
-        this.vehicleData,
-        this.vehicleImage,
-        this.packagingSymbols,
-        this.invoice,
-        this.insuranceCharge,
-        this.baseTotal,
-        this.extraChargesList,
-        this.bid_type = 0,
-        this.cityDetails,
-        this.isClaimed,
-        this.isRescheduled,
-        this.reScheduleDateTime});
+      this.id,
+      this.clientId,
+      this.clientName,
+      this.date,
+      this.pickupPoint,
+      this.deliveryPoint,
+      this.countryId,
+      this.countryName,
+      this.cityId,
+      this.cityName,
+      this.parcelType,
+      this.totalWeight,
+      this.totalDistance,
+      this.pickupDatetime,
+      this.deliveryDatetime,
+      this.parentOrderId,
+      this.status,
+      this.paymentId,
+      this.paymentType,
+      this.paymentStatus,
+      this.paymentCollectFrom,
+      this.deliveryManId,
+      this.deliveryManName,
+      this.fixedCharges,
+      this.extraCharges,
+      this.vehicleCharge,
+      this.totalAmount,
+      this.reason,
+      this.pickupConfirmByClient,
+      this.pickupConfirmByDeliveryMan,
+      this.pickupTimeSignature,
+      this.deliveryTimeSignature,
+      this.deletedAt,
+      this.returnOrderId,
+      this.weightCharge,
+      this.distanceCharge,
+      this.totalParcel,
+      this.autoAssign,
+      this.cancelledDeliverManIds,
+      this.vehicleId,
+      this.vehicleData,
+      this.vehicleImage,
+      this.packagingSymbols,
+      this.invoice,
+      this.insuranceCharge,
+      this.baseTotal,
+      this.extraChargesList,
+      this.bid_type = 0,
+      this.cityDetails,
+      this.isClaimed,
+      this.isRescheduled,
+      this.reScheduleDateTime});
 
   OrderData.fromJson(Map<String, dynamic> json) {
     orderTrackingId = json['order_tracking_id'];
@@ -311,7 +318,7 @@ class OrderData {
     // Fixing the issue for extraChargesList:
     extraChargesList = json['extra_charge_list'] != null
         ? List<ExtraCharges>.from(
-        json['extra_charge_list'].map((x) => ExtraCharges.fromJson(x)))
+            json['extra_charge_list'].map((x) => ExtraCharges.fromJson(x)))
         : [];
 
     cityDetails = json['city_details_list'] != null
@@ -320,8 +327,10 @@ class OrderData {
     packagingSymbols = json["packaging_symbols"] == null
         ? []
         : List<PackagingSymbol>.from(
-        json["packaging_symbols"]!.map((x) => PackagingSymbol.fromJson(x)));
+            json["packaging_symbols"]!.map((x) => PackagingSymbol.fromJson(x)));
   }
+
+  set isExpanded(bool isExpanded) {}
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = new Map<String, dynamic>();
@@ -386,7 +395,7 @@ class OrderData {
     data["packaging_symbols"] = packagingSymbols == null
         ? []
         : List<PackagingSymbol>.from(
-        this.packagingSymbols!.map((x) => x.toJson()));
+            this.packagingSymbols!.map((x) => x.toJson()));
     return data;
   }
 }

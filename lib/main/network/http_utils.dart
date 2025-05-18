@@ -21,7 +21,7 @@ typedef StreamCallBack = Function(String var1);
 class HttpUtils {
   static late final Dio dio;
   static final CancelToken _cancelToken = CancelToken();
-  static late final Function? _unAuthHandle;
+  static Function? _unAuthHandle;
 
   static init({Function? unAuthHandle}) async {
     PackageInfo packageInfo = await PackageInfo.fromPlatform();
@@ -37,8 +37,10 @@ class HttpUtils {
     );
 
     // Ignore SSL certificate errors (for development purposes only)
-    (dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate = (client) {
-      client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+    (dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate =
+        (client) {
+      client.badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
       return client;
     };
 
@@ -88,7 +90,6 @@ class HttpUtils {
       responseBody: true,
     ));
     // dio.interceptors.add(MyLogInterceptor());
-
 
     if (kDebugMode) {
       // DdCheckPlugin().init(
@@ -223,7 +224,11 @@ class HttpUtils {
         options: options,
         cancelToken: cancelToken ?? _cancelToken,
       );
-      response.data?.stream.transform(unit8Transformer).transform(const Utf8Decoder()).transform(const LineSplitter()).listen(
+      response.data?.stream
+          .transform(unit8Transformer)
+          .transform(const Utf8Decoder())
+          .transform(const LineSplitter())
+          .listen(
         onData,
         onDone: onDone,
         onError: (d) {
@@ -237,7 +242,8 @@ class HttpUtils {
     }
   }
 
-  static StreamTransformer<Uint8List, List<int>> unit8Transformer = StreamTransformer.fromHandlers(
+  static StreamTransformer<Uint8List, List<int>> unit8Transformer =
+      StreamTransformer.fromHandlers(
     handleData: (data, sink) {
       sink.add(List<int>.from(data));
     },

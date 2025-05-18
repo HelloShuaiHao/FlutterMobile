@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:mighty_delivery/bidding/extensions/extension_util/animation_extensions.dart';
 import 'package:mighty_delivery/extensions/extension_util/context_extensions.dart';
 import 'package:mighty_delivery/main/network/test_signalR.dart';
+import 'package:mighty_delivery/main/screens/LanguageScreen.dart';
 import '../../bidding/delivery/models/BidOrderModel.dart';
 import '../../bidding/delivery/screens/DeliveryBidListScreen.dart';
 import '../../bidding/utils/Constants.dart';
@@ -72,7 +73,7 @@ class _DHomeFragmentState extends State<DHomeFragment>
   //   TODAY_ORDER,
   //   REMAINING_ORDER,
   //   COMPLETED_ORDER,
-  //   INPROGRESS_ORDER,
+  // GRESS_ORDER,
   //   TOTAL_EARNING,
   //   WALLET_BALANCE,
   //   PENDING_WITHDRAW_REQUEST,
@@ -130,42 +131,29 @@ class _DHomeFragmentState extends State<DHomeFragment>
 
   Future<void> goToCountScreen(int index) async {
     if (index == 0 || index == 1) {
-      DeliveryDashBoard().launch(context).then((value) {
+      DeliveryDashBoard(
+        selectedIndex: index,
+      ).launch(context).then((value) {
         setState(() {});
         getDashboardCountDataApi();
       });
     } else if (index == 2) {
       DeliveryDashBoard(
-        selectedIndex: 5,
+        selectedIndex: 2, // 确保索引在范围内
       ).launch(context).then((value) {
         setState(() {});
         getDashboardCountDataApi();
       });
     } else if (index == 3) {
       DeliveryDashBoard(
-        selectedIndex: 1,
+        selectedIndex: 3, // 确保索引在范围内
       ).launch(context).then((value) {
         setState(() {});
         getDashboardCountDataApi();
       });
-    } else if (index == 4) {
-      EarningHistoryScreen().launch(context);
-    } else if (index == 5) {
-      WalletScreen().launch(context).then((value) {
-        getDashboardCountDataApi();
-      });
     } else {
-      if (countData?.walletBalance.validate() != 0) {
-        await getBankDetail();
-        if (userBankAccount != null)
-          WithDrawScreen(
-            onTap: () {},
-          ).launch(context);
-        else {
-          toast(language.bankNotFound);
-          BankDetailScreen(isWallet: true).launch(context);
-        }
-      }
+      // 处理其他情况
+      log("Invalid index: $index");
     }
   }
 
@@ -279,7 +267,7 @@ class _DHomeFragmentState extends State<DHomeFragment>
             borderRadius: BorderRadius.circular(defaultRadius),
             backgroundColor: darkRed),
         child: Text("${language.orderAvailableForBidding}".capitalizedByWord(),
-            style: boldTextStyle(size: 16, color: Colors.white))
+                style: boldTextStyle(size: 16, color: Colors.white))
             .paddingAll(16),
       )
           .visible(latestOrder != null || latestOrderToCancelBid != null)
@@ -299,7 +287,7 @@ class _DHomeFragmentState extends State<DHomeFragment>
               borderRadius: BorderRadius.circular(defaultRadius),
               backgroundColor: darkRed),
           child: Text("${language.bidAvailableForCancel}".capitalizedByWord(),
-              style: boldTextStyle(size: 16, color: Colors.white))
+                  style: boldTextStyle(size: 16, color: Colors.white))
               .paddingAll(16),
         )
             .visible(latestOrder != null || latestOrderToCancelBid != null)
@@ -312,7 +300,7 @@ class _DHomeFragmentState extends State<DHomeFragment>
         .where(ALL_DELIVERY_MAN_IDS, arrayContains: getIntAsync(USER_ID))
         .snapshots()
         .listen(
-          (snapshot) {
+      (snapshot) {
         if (snapshot.docs.isEmpty) {
           latestOrder = null;
           setState(() {});
@@ -376,19 +364,25 @@ class _DHomeFragmentState extends State<DHomeFragment>
                 borderRadius: radius(defaultRadius),
                 backgroundColor: Colors.white24),
             child: Row(children: [
-              Icon(Ionicons.ios_location_outline,
-                  color: Colors.white, size: 18),
-              8.width,
+              // 'assets/icon/ic_languages.png'
+              Image.asset(
+                'assets/icon/ic_languages.png',
+                height: 18,
+                width: 18,
+                color: Colors.white, // 如果需要颜色覆盖
+              ),
               // Text(CityModel.fromJson(getJSONAsync(CITY_DATA)).name!.validate(),
               //     style: primaryTextStyle(color: white)),
             ]).onTap(() {
-              UserCitySelectScreen(
-                isBack: true,
-                onUpdate: () {
-                  currentPage = 1;
-                  setState(() {});
-                },
-              ).launch(context);
+              // UserCitySelectScreen(
+              //   isBack: true,
+              //   onUpdate: () {
+              //     currentPage = 1;
+              //     setState(() {});
+              //   },
+              // ).launch(context);
+              LanguageScreen().launch(context,
+                  pageRouteAnimation: PageRouteAnimation.SlideBottomTop);
             },
                 highlightColor: Colors.transparent,
                 hoverColor: Colors.transparent,
@@ -464,15 +458,15 @@ class _DHomeFragmentState extends State<DHomeFragment>
                         color: ColorUtils.colorPrimary,
                       ).onTap(() async {
                         await showInDialog(context,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: radius()),
-                            builder: (_) => FilterCountScreen(),
-                            contentPadding: EdgeInsets.zero)
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: radius()),
+                                builder: (_) => FilterCountScreen(),
+                                contentPadding: EdgeInsets.zero)
                             .then((value) {
                           String startDate =
-                          DateFormat('yyyy-MM-dd').format(value[0]);
+                              DateFormat('yyyy-MM-dd').format(value[0]);
                           String endDate =
-                          DateFormat('yyyy-MM-dd').format(value[1]);
+                              DateFormat('yyyy-MM-dd').format(value[1]);
                           getDashboardCountDataApi(
                               startDate: startDate, endDate: endDate);
                         });
@@ -492,11 +486,11 @@ class _DHomeFragmentState extends State<DHomeFragment>
                     controller: scrollController,
                     padding: EdgeInsets.fromLTRB(7, 5, 7, 5),
                     itemBuilder: (context, index) {
-                      log("GETCOUNT::: ${getCount(index)}");
+                      // log("GETCOUNT::: ${getCount(index)}");
                       return countWidget(
-                          text: items[index],
-                          value: getCount(index),
-                          color: colorList[index])
+                              text: items[index],
+                              value: getCount(index),
+                              color: colorList[index])
                           .onTap(() {
                         goToCountScreen(index);
                       });
@@ -544,10 +538,10 @@ class _DHomeFragmentState extends State<DHomeFragment>
     return Container(
       decoration: appStore.isDarkMode
           ? boxDecorationWithRoundedCorners(
-          borderRadius: BorderRadius.circular(defaultRadius),
-          backgroundColor: color)
+              borderRadius: BorderRadius.circular(defaultRadius),
+              backgroundColor: color)
           : boxDecorationRoundedWithShadow(defaultRadius.toInt(),
-          backgroundColor: color),
+              backgroundColor: color),
       padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,

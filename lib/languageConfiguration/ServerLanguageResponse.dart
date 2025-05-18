@@ -10,7 +10,8 @@ class ServerLanguageResponse {
   ServerLanguageResponse.fromJson(Map<String, dynamic> json) {
     status = json['status'];
     currentVersionNo = json['version_code'];
-    themeColor = json['theme_color'];
+    // themeColor = json['theme_color'];
+    themeColor = "#4682B4"; // 设置默认主题颜色
     isAllowDeliveryMan = json['allow_deliveryman'];
     if (json['data'] != null) {
       data = <LanguageJsonData>[];

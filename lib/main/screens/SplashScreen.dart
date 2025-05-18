@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
 import '../../delivery/fragment/DHomeFragment.dart';
 import '../../extensions/extension_util/context_extensions.dart';
@@ -40,56 +41,21 @@ class SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> init() async {
-    String versionNo = await getStringAsync(CURRENT_LAN_VERSION, defaultValue: LanguageVersion);
+    String versionNo = await getStringAsync(CURRENT_LAN_VERSION,
+        defaultValue: LanguageVersion);
     // Language version update is giving issues
-    await getLanguageList("").then((value) {
-      appStore.setThemeColor(value.themeColor!);
-      appStore.updateTheme(colorFromHex(value.themeColor!));
-      appStore.setIsAllowDeliveryMan(value.isAllowDeliveryMan ?? false);
-      appStore.setLoading(false);
-      if (value.status == true) {
-        setValue(CURRENT_LAN_VERSION, value.currentVersionNo.toString());
-        if (value.data!.length > 0) {
-          defaultServerLanguageData = value.data;
-          performLanguageOperation(defaultServerLanguageData);
-          setValue(LanguageJsonDataRes, value.toJson());
-          // Check if default language set from server
-          bool isSetLanguage = getBoolAsync(IS_SELECTED_LANGUAGE_CHANGE, defaultValue: false);
-          if (!isSetLanguage) {
-            for (int i = 0; i < value.data!.length; i++) {
-              if (value.data![i].isDefaultLanguage == 1) {
-                setValue(SELECTED_LANGUAGE_CODE, value.data![i].languageCode);
-                setValue(SELECTED_LANGUAGE_COUNTRY_CODE, value.data![i].countryCode);
-                appStore.setLanguage(value.data![i].languageCode!, context: context);
-                break;
-              }
-            }
-          }
-        } else {
-          defaultServerLanguageData = [];
-          selectedServerLanguageData = null;
-          setValue(LanguageJsonDataRes, "");
-        }
-      } else {
-        String getJsonData = getStringAsync(LanguageJsonDataRes, defaultValue: "");
-        if (getJsonData.isNotEmpty) {
-          ServerLanguageResponse languageSettings = ServerLanguageResponse.fromJson(json.decode(getJsonData.trim()));
-          if (languageSettings.data!.length > 0) {
-            defaultServerLanguageData = languageSettings.data;
-            performLanguageOperation(defaultServerLanguageData);
-          }
-        }
-      }
-    }).catchError((error) {
-      appStore.setLoading(false);
-      log(error);
-    });
+
+    initJsonFile(); // 使用本地 JSON 文件初始化语言数据
+    performLanguageOperation(defaultServerLanguageData); // 直接操作本地数据
+    appStore.setLoading(false);
+
     Future.delayed(
       Duration(seconds: 1),
       () async {
         if (appStore.isLoggedIn && getIntAsync(USER_ID) != 0) {
           await getUserDetail(getIntAsync(USER_ID)).then((value) async {
-            setValue(IS_VERIFIED_DELIVERY_MAN, !value.documentVerifiedAt.isEmptyOrNull);
+            setValue(IS_VERIFIED_DELIVERY_MAN,
+                !value.documentVerifiedAt.isEmptyOrNull);
             if (value.deliverymanVehicleHistory != null) {
               setValue(VEHICLE, value.deliverymanVehicleHistory![0].toJson());
             }
@@ -102,18 +68,26 @@ class SplashScreenState extends State<SplashScreen> {
               setValue(OTP_VERIFIED, value.otpVerifyAt != null);
 
               //update app version
-              Future<PackageInfo> packageInfoFuture = PackageInfo.fromPlatform();
+              Future<PackageInfo> packageInfoFuture =
+                  PackageInfo.fromPlatform();
               final packageInfo = await packageInfoFuture;
-              if (value.app_version.isEmptyOrNull || value.app_version != packageInfo.version) {
-                await updateUserStatus({"id": getIntAsync(USER_ID), "app_version": packageInfo.version})
-                    .then((value) {});
+              if (value.app_version.isEmptyOrNull ||
+                  value.app_version != packageInfo.version) {
+                await updateUserStatus({
+                  "id": getIntAsync(USER_ID),
+                  "app_version": packageInfo.version
+                }).then((value) {});
               }
 
               if (value.emailVerifiedAt.isEmptyOrNull ||
                   value.otpVerifyAt.isEmptyOrNull ||
-                  (value.documentVerifiedAt.isEmptyOrNull && getStringAsync(USER_TYPE) == DELIVERY_MAN)) {
+                  (value.documentVerifiedAt.isEmptyOrNull &&
+                      getStringAsync(USER_TYPE) == DELIVERY_MAN)) {
                 VerificationListScreen().launch(context);
-              } else if (CityModel.fromJson(getJSONAsync(CITY_DATA)).name.validate().isNotEmpty) {
+              } else if (CityModel.fromJson(getJSONAsync(CITY_DATA))
+                  .name
+                  .validate()
+                  .isNotEmpty) {
                 if (getStringAsync(USER_TYPE) == CLIENT) {
                   DashboardScreen().launch(context, isNewTask: true);
                 } else {
@@ -163,10 +137,11 @@ class SplashScreenState extends State<SplashScreen> {
                   Image.asset(ic_logo, height: 80, width: 80, fit: BoxFit.fill)
                       .cornerRadiusWithClipRRect(defaultRadius),
                   16.height,
-                  Text(language.appName == "$defaultKeyNotFoundValue(9)" ? mAppName : language.appName,
-                          style: boldTextStyle(size: 20), textAlign: TextAlign.center)
-                      .expand(),
-                  Text('v ${snap.data!.version.validate()}', style: secondaryTextStyle(size: 12)),
+                  Text(
+                    mAppName,
+                    style: boldTextStyle(size: 20),
+                    textAlign: TextAlign.center,
+                  ).expand(),
                   16.height,
                 ],
               ),

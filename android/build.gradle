@@ -1,0 +1,84 @@
+ext {
+    appCompatVersion    = "1.4.2"           // or higher / as desired
+    playServicesLocationVersion = "21.3.0"  // or higher / as desired
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+
+        // added by shuai
+        maven { url "https://jitpack.io" }
+
+        // [required] flutter_background_geolocation
+        maven { url "${project(':flutter_background_geolocation').projectDir}/libs" }
+        maven { url 'https://developer.huawei.com/repo/' }
+        // [required] background_fetch
+        maven { url "${project(':background_fetch').projectDir}/libs" }        
+        
+        // 
+
+        maven {
+            url 'https://google.bintray.com/exoplayer/'
+        }
+        maven {
+            url "https://artifactory.paytm.in/libs-release-local"
+        }
+        configurations.all {
+            resolutionStrategy {
+                force "com.google.android.gms:play-services-location:21.0.1"
+            }
+        }
+    }
+}
+
+
+rootProject.buildDir = '../build'
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            // Set Android specific configurations inside the android block
+            project.android {
+                if (namespace == null) {
+                    namespace project.group
+                }
+            }
+
+            project.android.compileSdkVersion = 34
+            project.android.defaultConfig.minSdkVersion = 31
+            project.android.defaultConfig.targetSdkVersion = 34            
+        }
+
+
+        // added by shuai
+        if (project.plugins.hasPlugin("com.android.application") || project.plugins.hasPlugin("com.android.library")) {
+            tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach { kotlinTask ->
+                def sourceCompatibility = project.android.compileOptions.sourceCompatibility?.toString() ?: "17"
+                def jvmTarget = kotlinTask.kotlinOptions.jvmTarget ?: ""
+                if (sourceCompatibility != jvmTarget) {
+                    kotlinTask.kotlinOptions.jvmTarget = sourceCompatibility
+                    println "INFO: Updated jvmTarget for ${project.name} to ${sourceCompatibility}"
+                }
+            }
+        }
+    }
+}
+
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+subprojects {
+    project.evaluationDependsOn(':app')
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
+
+// added by shuai
+configurations.all {
+    resolutionStrategy {
+        force 'org.bouncycastle:bcprov-jdk15on:1.70' // 强制使用 1.70 版本
+    }
+}

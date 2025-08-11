@@ -1,0 +1,211 @@
+name: mighty_delivery
+description: A new Flutter project.
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  # self-defined
+  flutter_background_geolocation:
+    git:
+      url: https://github.com/transistorsoft/flutter_background_geolocation.git
+  flutter_datetime_picker_plus: ^2.1.0
+  camera: ^0.10.5+5
+  path: ^1.8.3  
+  signature: ^5.4.0
+  gallery_saver: ^2.3.2
+
+  flutter:
+    sdk: flutter
+
+  # CONNECTIVITY
+  url_launcher: ^6.2.5
+  package_info_plus: ^5.0.1
+  intl: ^0.19.0
+  html: ^0.15.4
+  http: ^1.2.1
+  connectivity_plus: ^6.1.2
+  flutter_vector_icons: ^2.0.0
+
+
+  # STATE MANAGEMENT
+  mobx: ^2.3.0+1
+  flutter_mobx: ^2.2.0
+
+  # Base
+  # nb_utils: ^6.1.2
+  google_fonts: ^6.1.0
+  animated_bottom_navigation_bar: ^1.3.3
+  animated_notch_bottom_bar: ^1.0.1
+  permission_handler: ^11.3.0
+
+  # TOOLS
+  cupertino_icons: ^1.0.6
+  lottie: ^3.1.0
+  timeline_tile: ^2.0.0
+  country_code_picker: ^3.0.0
+  chewie: 1.8.2
+
+  # Dotted Line
+  dotted_line: ^3.2.2
+
+  # Payment gateway
+  flutter_stripe: ^10.0.0
+  razorpay_flutter: ^1.3.6
+  #  flutterwave_standard: ^1.0.8
+  flutterwave_standard_smart: ^1.0.4
+  paytm:
+    git:
+      url: https://github.com/appmeetmighty/Paytm-All-in-one-flutter-sdk.git
+  flutter_paystack:
+    git:
+      url: https://github.com/appmeetmighty/flutter_paystack/
+  pay_with_paystack: ^1.0.13
+  #  flutter_braintree: ^4.0.0
+  flutter_braintree_betc:
+    git:
+      url: https://github.com/appmeetmighty/flutter-braintree.git
+  flutter_paytabs_bridge: ^2.6.7
+  my_fatoorah: ^3.3.0
+
+  # IMAGES
+  image_picker: ^1.0.7
+  file_picker: ^8.0.6
+  cached_network_image: ^3.3.1
+  syncfusion_flutter_signaturepad: ^26.1.41
+  screenshot: ^3.0.0
+  date_time_picker: ^2.1.0
+
+  # MAP
+  geolocator: ^10.1.0
+  geocode: ^1.0.3
+  google_maps_flutter: ^2.5.3
+  flutter_polyline_points: ^2.1.0
+  maps_launcher: ^2.2.0
+  google_maps_place_picker_mb: ^3.1.2
+
+  # PUSH NOTIFICATION
+  onesignal_flutter: ^5.0.4
+
+  #OTP TEXTFIELD
+  otp_text_field: ^1.1.3
+
+  #FIREBASE
+  firebase_crashlytics: ^3.4.16
+  firebase_core: ^2.25.5
+  firebase_auth: ^4.17.6
+  firebase_storage: ^11.6.7
+  firebase_database: ^10.4.7
+  paginate_firestore: ^1.0.3+1
+  cloud_firestore: ^4.15.6
+
+  # DOWNLOAD INVOICE PDF
+  pdf: ^3.10.8
+  pdfx: ^2.6.0
+  internet_file: ^1.2.0
+  path_provider: ^2.1.2
+  open_file: ^3.3.2
+  loading_animation_widget: ^1.2.1
+  #  printing: ^5.12.0
+  #Database
+  shared_preferences: ^2.2.2
+  # READ MORE LESS
+  readmore: ^3.0.0
+
+  # SOCIAL LOGIN
+  google_sign_in: ^6.2.1
+  the_apple_sign_in: ^1.1.1
+  geocoding: ^3.0.0
+
+  #STORE _CHECKER
+  store_checker:
+    git:
+      url: https://github.com/appmeetmighty/store_checker.git
+
+  flutter_rating_bar: ^4.0.1
+  dotted_border: ^2.1.0
+  share_plus: ^10.0.0
+  flutter_ringtone_player: ^4.0.0+2
+
+  #render htmldata
+  photo_view: ^0.14.0
+  flutter_html:
+    git:
+      url: https://github.com/appmeetmighty/flutter_html/
+      ref: master
+
+  carousel_slider: ^4.2.1
+
+  #CIRCULAR PROGRESS BAR
+  percent_indicator: ^4.2.3
+
+  #ENCRYPT
+  encrypt: ^5.0.3
+
+  flutter_animate:
+
+  flutter_localizations:
+    sdk: flutter
+
+  logging: ^1.3.0
+
+  # http request
+  dio: ^5.7.0
+  get: ^4.6.6
+  logger: ^2.5.0
+  get_storage: 2.1.1
+  archive: ^4.0.2
+  date_format: ^2.0.9
+  flutter_easyloading: ^3.0.5
+
+  # flutter signalR
+  signalr_netcore:
+  
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.8
+  mobx_codegen: ^2.6.0+1
+  flutter_launcher_icons: ^0.13.1
+  
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/app_icon.png" # 图标路径
+  remove_alpha_ios: true # 移除 iOS 图标的透明通道  
+
+dependency_overrides:
+  intl: ^0.18.0
+  http: ^0.13.5
+  cloud_firestore: ^4.8.1
+  package_info_plus: ^4.1.0
+  flutter_svg: ^2.0.9
+  flutter_layout_grid: ^2.0.7
+  webview_flutter: ^4.8.0
+  flutter_inappwebview_android:
+    git:
+      url: https://github.com/holzgeist/flutter_inappwebview
+      path: flutter_inappwebview_android
+      ref: d89b1d32638b49dfc58c4b7c84153be0c269d057
+  webview_flutter_android: 3.16.1
+  wakelock_plus: ^1.2.10
+
+  #flutter packages pub run build_runner build --delete-conflicting-outputs
+
+flutter:
+
+  uses-material-design: true
+
+  assets:
+    - assets/
+    - assets/ringtone/
+    - assets/icons/
+    - assets/flag/
+    - assets/icon/
+    - assets/packing_symbols/
+    - assets/staticjson/

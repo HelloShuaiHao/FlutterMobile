@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "117043648575",
+    "project_id": "flutter-demo-cf6ff",
+    "storage_bucket": "flutter-demo-cf6ff.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:117043648575:android:3d09a165ecf08ddc29c08a",
+        "android_client_info": {
+          "package_name": "u.nus.edu.astar.demo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBQbrfWAmijHRK3wTdUmJ1VJtWWfNXgpiw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

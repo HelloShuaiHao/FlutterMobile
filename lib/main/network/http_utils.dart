@@ -74,11 +74,6 @@ class HttpUtils {
       // 新增：全局 header
       headers['__tenant'] = 'CF';
 
-      ///用来获取当前系统中的语言
-      // Locale locale = Localizations.localeOf(_get.Get.context!);
-      // headers['APP_LanguageCode'] = locale.languageCode;
-      // headers['env'] = locale.languageCode == "zh" ? 1 : 2;
-
       handler.next(options);
     }));
 
@@ -92,7 +87,7 @@ class HttpUtils {
             try {
               // 用 refresh_token 换新 token
               var refreshResponse = await dio.post(
-                '${SpUtil.baseAuthUrl.val}/connect/token',
+                '${SpUtil.baseAuthUrl.val}/api/auth/connect/token',
                 data: {
                   'client_id': 'SimTech.Apex_App',
                   'grant_type': 'refresh_token',
@@ -315,4 +310,34 @@ class HttpUtils {
       sink.add(List<int>.from(data));
     },
   );
+
+  static Future<void> _dump401Token({
+    required String phase,
+    required RequestOptions req,
+    Response? resp,
+    String? newAccess,
+    String? newRefresh,
+  }) async {
+    try {
+      final ts = DateTime.now().toIso8601String();
+      final access = newAccess ?? (SpUtil.token.val?.toString() ?? '');
+      final refresh =
+          newRefresh ?? (SpUtil.refresh_token.val?.toString() ?? '');
+      final authHeader = req.headers['Authorization']?.toString() ?? '';
+      final content = StringBuffer()
+        ..writeln('[$ts][$phase]')
+        ..writeln('URL: ${req.uri}')
+        ..writeln('status: ${resp?.statusCode}')
+        ..writeln('authHeader: $authHeader')
+        ..writeln('accessToken: $access')
+        ..writeln('refreshToken: $refresh')
+        ..writeln('-----');
+
+      final path = '${Directory.systemTemp.path}/last_401_token.txt';
+      final file = File(path);
+      await file.writeAsString(content.toString(),
+          mode: FileMode.append, flush: true);
+      debugPrint('401 tokens saved to: $path');
+    } catch (_) {}
+  }
 }

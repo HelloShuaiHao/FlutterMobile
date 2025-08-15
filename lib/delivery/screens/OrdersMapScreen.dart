@@ -66,6 +66,8 @@ class _OrdersMapScreenState extends State<OrdersMapScreen> {
   @override
   void dispose() {
     // 取消监听
+    // 现在有一个问题是：我每次点击这个定位的按钮 进入OrderMapScreen以后，定位服务就会启动，定位服务我用的是background_geolocation,然后就会不停的弹出提醒，稍微动一下就会触发事件，
+    // 你觉得我该怎么修改
     bg.BackgroundGeolocation.removeListeners();
     super.dispose();
   }
@@ -100,7 +102,7 @@ class _OrdersMapScreenState extends State<OrdersMapScreen> {
     // 2.  Configure the plugin
     bg.BackgroundGeolocation.ready(bg.Config(
       desiredAccuracy: bg.Config.DESIRED_ACCURACY_HIGH,
-      distanceFilter: 10,
+      distanceFilter: 100,
       stopOnTerminate: false,
       startOnBoot: true,
       debug: true,

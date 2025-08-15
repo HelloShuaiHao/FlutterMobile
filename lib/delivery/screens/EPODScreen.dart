@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:mighty_delivery/extensions/extension_util/widget_extensions.dart';
 import 'package:signature/signature.dart';
 import 'CameraScreen.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class EPODScreen extends StatefulWidget {
   const EPODScreen({Key? key}) : super(key: key);
@@ -29,6 +30,30 @@ class _EPODScreenState extends State<EPODScreen> {
   }
 
   Future<void> _takePhoto() async {
+    // iOS: 先请求权限，避免直接崩溃
+    final statuses = await [
+      Permission.camera,
+      // iOS 11+ 保存到相册需要 add-only 权限；permission_handler 11 起提供 photosAddOnly
+      if (Platform.isIOS) Permission.photosAddOnly,
+    ].request();
+
+    // if (!statuses[Permission.camera]!.isGranted) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(content: Text('相机权限被拒绝，请到系统设置中开启')),
+    //   );
+    //   openAppSettings();
+    //   return;
+    // }
+    // if (Platform.isIOS &&
+    //     !(statuses[Permission.photosAddOnly]?.isGranted ?? true)) {
+    //   // 如果要保存到相册，最好确保这个权限
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(content: Text('相册写入权限被拒绝，请到系统设置中开启')),
+    //   );
+    //   openAppSettings();
+    //   return;
+    // }
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const CameraScreen()),

@@ -27,6 +27,7 @@ class _CameraScreenState extends State<CameraScreen> {
       _controller = CameraController(
         _cameras![0],
         ResolutionPreset.medium,
+        enableAudio: false, // 只拍照时关闭音频，避免麦克风权限问题
       );
       await _controller!.initialize();
       setState(() {

@@ -26,7 +26,7 @@ import '../../extensions/extension_util/widget_extensions.dart';
 import '../../languageConfiguration/LanguageDefaultJson.dart';
 import '../../main/utils/Images.dart';
 import 'package:my_fatoorah/my_fatoorah.dart';
-import 'package:paytm/paytm.dart';
+// import 'package:paytm/paytm.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 import '../../extensions/common.dart';
@@ -706,77 +706,77 @@ class PaymentScreenState extends State<PaymentScreen> {
   // }
 
   /// PayTm Payment
-  void paytmPayment() async {
-    setState(() {
-      loading = true;
-    });
+  // void paytmPayment() async {
+  //   setState(() {
+  //     loading = true;
+  //   });
 
-    String callBackUrl = (isTestType
-            ? 'https://securegw-stage.paytm.in'
-            : 'https://securegw.paytm.in') +
-        '/theia/paytmCallback?ORDER_ID=' +
-        widget.orderId.toString();
+  //   String callBackUrl = (isTestType
+  //           ? 'https://securegw-stage.paytm.in'
+  //           : 'https://securegw.paytm.in') +
+  //       '/theia/paytmCallback?ORDER_ID=' +
+  //       widget.orderId.toString();
 
-    var url = 'https://desolate-anchorage-29312.herokuapp.com/generateTxnToken';
+  //   var url = 'https://desolate-anchorage-29312.herokuapp.com/generateTxnToken';
 
-    var body = json.encode({
-      "mid": paytmMerchantId,
-      "key_secret": paytmMerchantKey,
-      "website": isTestType ? "WEBSTAGING" : "DEFAULT",
-      "orderId": widget.orderId,
-      "amount": widget.totalAmount.toString(),
-      "callbackUrl": callBackUrl,
-      "custId": getIntAsync(USER_ID).toString(),
-      "testing": isTestType ? 0 : 1
-    });
+  //   var body = json.encode({
+  //     "mid": paytmMerchantId,
+  //     "key_secret": paytmMerchantKey,
+  //     "website": isTestType ? "WEBSTAGING" : "DEFAULT",
+  //     "orderId": widget.orderId,
+  //     "amount": widget.totalAmount.toString(),
+  //     "callbackUrl": callBackUrl,
+  //     "custId": getIntAsync(USER_ID).toString(),
+  //     "testing": isTestType ? 0 : 1
+  //   });
 
-    try {
-      final response = await http.post(
-        Uri.parse(url),
-        body: body,
-        headers: {'Content-type': "application/json"},
-      );
+  //   try {
+  //     final response = await http.post(
+  //       Uri.parse(url),
+  //       body: body,
+  //       headers: {'Content-type': "application/json"},
+  //     );
 
-      String txnToken = response.body;
+  //     String txnToken = response.body;
 
-      var paytmResponse = Paytm.payWithPaytm(
-        mId: paytmMerchantId!,
-        orderId: widget.orderId.toString(),
-        txnToken: txnToken,
-        txnAmount: widget.totalAmount.toString(),
-        callBackUrl: callBackUrl,
-        staging: isTestType,
-        appInvokeEnabled: false,
-      );
+  //     var paytmResponse = Paytm.payWithPaytm(
+  //       mId: paytmMerchantId!,
+  //       orderId: widget.orderId.toString(),
+  //       txnToken: txnToken,
+  //       txnAmount: widget.totalAmount.toString(),
+  //       callBackUrl: callBackUrl,
+  //       staging: isTestType,
+  //       appInvokeEnabled: false,
+  //     );
 
-      paytmResponse.then((value) {
-        setState(() {
-          loading = false;
-          if (value['error']) {
-            toast(value['errorMessage']);
-          } else {
-            if (value['response'] != null) {
-              toast(value['response']['RESPMSG']);
-              if (value['response']['STATUS'] == 'TXN_SUCCESS') {
-                if (widget.isWallet == true) {
-                  paymentConfirm(
-                      paymentType: PAYMENT_TYPE_PAYTM,
-                      transactionId: value['response']['TXNID']);
-                } else {
-                  savePaymentApiCall(
-                      paymentType: PAYMENT_TYPE_PAYTM,
-                      paymentStatus: 'paid',
-                      txnId: value['response']['TXNID']);
-                }
-              }
-            }
-          }
-        });
-      });
-    } catch (e) {
-      print(e);
-    }
-  }
+  //     paytmResponse.then((value) {
+  //       setState(() {
+  //         loading = false;
+  //         if (value['error']) {
+  //           toast(value['errorMessage']);
+  //         } else {
+  //           if (value['response'] != null) {
+  //             toast(value['response']['RESPMSG']);
+  //             if (value['response']['STATUS'] == 'TXN_SUCCESS') {
+  //               if (widget.isWallet == true) {
+  //                 paymentConfirm(
+  //                     paymentType: PAYMENT_TYPE_PAYTM,
+  //                     transactionId: value['response']['TXNID']);
+  //               } else {
+  //                 savePaymentApiCall(
+  //                     paymentType: PAYMENT_TYPE_PAYTM,
+  //                     paymentStatus: 'paid',
+  //                     txnId: value['response']['TXNID']);
+  //               }
+  //             }
+  //           }
+  //         }
+  //       });
+  //     });
+  //   } catch (e) {
+  //     print(e);
+  //   }
+  // }
 
   /// My Fatoorah Payment
   Future<void> myFatoorahPayment() async {
@@ -946,10 +946,12 @@ class PaymentScreenState extends State<PaymentScreen> {
                           } else if (selectedPaymentType ==
                               PAYMENT_TYPE_MERCADOPAGO) {
                             //  mercadoPagoPayment();
-                          } else if (selectedPaymentType ==
-                              PAYMENT_TYPE_PAYTM) {
-                            paytmPayment();
-                          } else if (selectedPaymentType ==
+                          }
+                          // else if (selectedPaymentType ==
+                          //     PAYMENT_TYPE_PAYTM) {
+                          //   paytmPayment();
+                          // }
+                          else if (selectedPaymentType ==
                               PAYMENT_TYPE_MYFATOORAH) {
                             myFatoorahPayment();
                           }

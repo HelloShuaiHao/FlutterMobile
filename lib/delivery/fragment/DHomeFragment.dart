@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:mighty_delivery/bidding/extensions/extension_util/animation_extensions.dart';
+import 'package:mighty_delivery/delivery/screens/TaskListScreen.dart';
 import 'package:mighty_delivery/extensions/extension_util/context_extensions.dart';
 import 'package:mighty_delivery/main/network/test_signalR.dart';
 import 'package:mighty_delivery/main/screens/LanguageScreen.dart';
@@ -16,6 +17,7 @@ import '../../bidding/delivery/screens/DeliveryBidListScreen.dart';
 import '../../bidding/utils/Constants.dart';
 import '../../delivery/screens/EarningHistoryScreen.dart';
 import '../../delivery/screens/FilterCountScreen.dart';
+import '../../delivery/screens/PreDeliveryScanScreen.dart';
 
 import '../../extensions/extension_util/int_extensions.dart';
 import '../../extensions/extension_util/num_extensions.dart';
@@ -54,6 +56,33 @@ import 'package:intl/intl.dart';
 
 // 日期格式化工具
 final DateFormat dateFormat = DateFormat('yyyy-MM-dd');
+
+// 示例任务数据
+final List<TaskItem> exampleTasks = const [
+  TaskItem(
+    id: '74649349',
+    address:
+        'CHANGI HYPER BUSINESS PK #2-11 8 8 Changi Business Park Ave 1\nSingapore 486018',
+    timeWindow: '8:00 AM — 10:00 AM',
+    contactName: 'LinksPoints Test DC Customer',
+    modules: [
+      Module(name: 'ZBK-B', code: '74649349,ZBK-B-01'),
+      Module(name: 'ZGN-A', code: '74649349,ZGN-A-01'),
+      Module(name: 'ZGN-W', code: '74649349,ZGN-W-01'),
+    ],
+  ),
+  TaskItem(
+    id: '74649427',
+    address:
+        'CHANGI HYPER BUSINESS PK #8-158 8, 8 Changi Bus\nSingapore 486018',
+    timeWindow: '8:00 AM — 10:00 AM',
+    contactName: 'LinksPoints Test DC Customer',
+    modules: [
+      Module(name: 'ZBK-B', code: '74649427,ZBK-B-01'),
+      Module(name: 'ZGN-A', code: '74649427,ZGN-A-01'),
+    ],
+  ),
+];
 
 class DHomeFragment extends StatefulWidget {
   @override
@@ -461,7 +490,6 @@ class _DHomeFragmentState extends State<DHomeFragment>
                         } else {
                           initialDate = DateTime.now();
                         }
-                        
 
                         DatePicker.showDatePicker(
                           context,
@@ -545,10 +573,17 @@ class _DHomeFragmentState extends State<DHomeFragment>
                   style: boldTextStyle(color: Colors.white)),
             ],
           ).onTap(() {
-            DeliveryDashBoard().launch(context).then((value) {
-              setState(() {});
-              getDashboardCountDataApi();
-            });
+            // DeliveryDashBoard().launch(context).then((value) {
+            //   setState(() {});
+            //   getDashboardCountDataApi();
+            // });
+
+            // 修改跳转逻辑为 TaskListScreen
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => PreDeliveryScanScreen(tasks: exampleTasks),
+              ),
+            );
           }),
         ),
       ),

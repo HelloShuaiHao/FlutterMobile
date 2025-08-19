@@ -28,11 +28,11 @@ const mOneSignalChannelId = 'YOUR ONE SIGNAL CHANNEL ID';
 //endregion
 
 //region  firebase data  for firebase_options.dart
-const String FIREBASE_API_KEY = "FIREBASE_API_KEY";
-const String FIREBASE_APP_ID = "FIREBASE_APP_ID";
+const String FIREBASE_API_KEY = "AIzaSyDZ8_HT1NWbcnXbtmI8f58DoNDmguGis5g";
+const String FIREBASE_APP_ID = "1:689021176015:android:9ef90079ae22c578cf8fba";
 const String FIREBASE_MESSAGING_SENDER_ID = "FIREBASE_MESSAGING_SENDER_ID";
-const String FIREBASE_PROJECT_ID = "FIREBASE_PROJECT_ID";
-const String FIREBASE_STORAGE_BUCKET = "FIREBASE_STORAGE_BUCKET";
+const String FIREBASE_PROJECT_ID = "fpg-sc-tms-uat";
+const String FIREBASE_STORAGE_BUCKET = "fpg-sc-tms-uat.firebasestorage.app";
 
 //region  firebase data  for firebase_options.dart FOR IOS APP USE
 const String FIREBASE_APP_ID_IOS = "FIREBASE_APP_ID_IOS";

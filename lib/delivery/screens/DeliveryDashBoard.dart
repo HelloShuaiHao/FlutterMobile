@@ -477,57 +477,121 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                   return ExpansionPanel(
                                     headerBuilder: (BuildContext context,
                                         bool isExpanded) {
-                                      return ListTile(
-                                        title: Text(
-                                          "🏚️: ${group.deliveryOrderId ?? '未知地址'}",
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 15),
-                                        ),
-                                        trailing: ElevatedButton(
-                                          onPressed: () async {
-                                            appStore.setLoading(true);
-                                            final routePlanService =
-                                                RoutePlanService();
-                                            for (var order
-                                                in group.orders ?? []) {
-                                              await routePlanService
-                                                  .addTaskStatus(
-                                                taskId: order.id!,
-                                                statusCode: "PickedUp",
-                                                name: "PickedUp",
-                                                senderMessage:
-                                                    "Your order has been collected",
-                                                receiverMessage:
-                                                    "Your order has been collected",
-                                                colorHex: "#00FF00",
+                                      return GestureDetector(
+                                        onLongPress: () {
+                                          // 长按事件：弹出对话框显示物品聚合
+                                          showDialog(
+                                            context: context,
+                                            builder: (BuildContext context) {
+                                              // 获取当前地点下所有订单的物品
+                                              final items = group.orders!
+                                                  .expand(
+                                                      (o) => o.taskItems ?? [])
+                                                  .map((item) =>
+                                                      item['name'] ??
+                                                      'Unknown Item')
+                                                  .toList();
+
+                                              return AlertDialog(
+                                                title: Text(
+                                                  "Item List",
+                                                  style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 18),
+                                                ),
+                                                content: SingleChildScrollView(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: items.map((item) {
+                                                      return Container(
+                                                        margin: EdgeInsets
+                                                            .symmetric(
+                                                                vertical: 8),
+                                                        padding:
+                                                            EdgeInsets.all(12),
+                                                        decoration:
+                                                            BoxDecoration(
+                                                          color: Colors
+                                                              .grey.shade100,
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(8),
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: Colors.grey
+                                                                  .withOpacity(
+                                                                      0.2),
+                                                              spreadRadius: 2,
+                                                              blurRadius: 5,
+                                                              offset:
+                                                                  Offset(0, 3),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        child: Row(
+                                                          children: [
+                                                            Icon(
+                                                                Icons
+                                                                    .inventory_2_outlined,
+                                                                color:
+                                                                    Colors.blue,
+                                                                size: 24), // 图标
+                                                            SizedBox(width: 12),
+                                                            Expanded(
+                                                              child: Text(
+                                                                item,
+                                                                style: TextStyle(
+                                                                    fontSize:
+                                                                        16,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w500),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      );
+                                                    }).toList(),
+                                                  ),
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () =>
+                                                        Navigator.of(context)
+                                                            .pop(),
+                                                    child: Text(
+                                                      "Close",
+                                                      style: TextStyle(
+                                                          color: Colors.blue,
+                                                          fontSize: 16),
+                                                    ),
+                                                  ),
+                                                ],
                                               );
-                                            }
-                                            appStore.setLoading(false);
-                                            toast('This group picked up!');
-                                            await getOrderListApiCall();
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor:
-                                                ColorUtils.colorPrimary,
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal: 16, vertical: 8),
+                                            },
+                                          );
+                                        },
+                                        child: ListTile(
+                                          title: Text(
+                                            "🏚️: ${group.deliveryOrderId ?? 'Unknown Address'}",
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 15),
                                           ),
-                                          child: Text("Pick up",
-                                              style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 13)),
                                         ),
                                       );
                                     },
                                     body: Column(
-                                      children: group.orders!
-                                          .map((order) => Container(
-                                                margin: EdgeInsets.symmetric(
-                                                    horizontal: 16),
-                                                child: orderCard(order),
-                                              ))
-                                          .toList(),
+                                      children: group.orders!.map((order) {
+                                        return Container(
+                                          margin: EdgeInsets.symmetric(
+                                              horizontal: 16),
+                                          child: orderCard(order),
+                                        );
+                                      }).toList(),
                                     ),
                                     isExpanded: group.isExpanded,
                                   );

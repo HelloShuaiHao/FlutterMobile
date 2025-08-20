@@ -57,7 +57,7 @@ class MyAuthProvider with ChangeNotifier {
           'username': usernameOrEmail,
           'password': password,
           'scope':
-              'TransportService PartnerService DeliveryService offline_access',
+              'TransportService PartnerService DeliveryService MobileService offline_access',
         },
       );
 

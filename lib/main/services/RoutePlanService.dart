@@ -12,33 +12,49 @@ class RoutePlanService {
     String? sorting,
     int? skipCount,
     int? maxResultCount,
+    String? taskDate, // 新增：yyyy-MM-dd
   }) async {
     try {
-      final queryParams = {
-        'vehicleId': vehicleId,
-        if (filter != null) 'Filter': filter,
-        if (driverId != null) 'DriverId': driverId,
-        if (statusCode != null) 'statusCode': statusCode.toString(),
-        if (sorting != null) 'Sorting': sorting,
-        if (skipCount != null) 'SkipCount': skipCount.toString(),
-        if (maxResultCount != null) 'MaxResultCount': maxResultCount.toString(),
+      final queryParams = <String, dynamic>{
+        // 与后端一致（注意大小写）
+        'VehicleId': vehicleId,
+        if (filter != null && filter.isNotEmpty) 'Filter': filter,
+        if (driverId != null && driverId.isNotEmpty) 'DriverId': driverId,
+        if (statusCode != null) 'statusCode': statusCode,
+        if (sorting != null && sorting.isNotEmpty) 'Sorting': sorting,
+        if (skipCount != null) 'SkipCount': skipCount,
+        if (maxResultCount != null) 'MaxResultCount': maxResultCount,
+        if (taskDate != null && taskDate.isNotEmpty)
+          'TaskDate': _ensureYmd(taskDate),
       };
 
-      final response = await HttpUtils.get<List<dynamic>>(
-        '${SpUtil.baseUrl.val}/api/delivery/transport-tasks/filter-by-vehicle-and-status',
+      final response = await HttpUtils.get<dynamic>(
+        '${SpUtil.baseUrl.val}/api/delivery/transport-tasks/filter-by-vehicle-status-date',
         params: queryParams,
       );
 
-      if (response.data != null) {
-        final List<dynamic> items = response.data!;
-        return items.map((e) => e as Map<String, dynamic>).toList();
+      final data = response.data;
+      if (data is List) {
+        return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      } else if (data is Map && data['items'] is List) {
+        return (data['items'] as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
       } else {
-        throw Exception('Failed to load route plans');
+        throw Exception('Unexpected response type: ${data.runtimeType}');
       }
-    } catch (e) {
-      print('Error fetching route plans: $e');
-      throw Exception('Failed to fetch route plans');
+    } catch (e, s) {
+      print('Error fetching route plans: $e\n$s');
+      rethrow;
     }
+  }
+
+  // 将任意可解析的日期规范化为 yyyy-MM-dd
+  static String _ensureYmd(String input) {
+    final dt = DateTime.tryParse(input);
+    if (dt == null) return input; // 已经是 yyyy-MM-dd 就原样返回
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${dt.year}-${two(dt.month)}-${two(dt.day)}';
   }
 
   Map<String, dynamic> transformNewResponseToExistingFormat(
@@ -193,12 +209,14 @@ class RoutePlanService {
 
   Future<Map<String, int>> getTaskCountByStatusName({
     required String vehicleId,
+    String? taskDate, // 新增参数
   }) async {
     try {
       final response = await HttpUtils.get<Map<String, dynamic>>(
         '/api/delivery/transport-tasks/count-by-status-name',
         params: {
           'VehicleId': vehicleId,
+          if (taskDate != null) 'TaskDate': taskDate, // 添加 TaskDate 参数
         },
       );
 

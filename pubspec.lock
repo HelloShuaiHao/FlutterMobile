@@ -1759,15 +1759,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.13"
-  paytm:
-    dependency: "direct main"
-    description:
-      path: "."
-      ref: HEAD
-      resolved-ref: "0e88a57855f534a1408e860a8f9aa4eaacb6f1e9"
-      url: "https://github.com/appmeetmighty/Paytm-All-in-one-flutter-sdk.git"
-    source: git
-    version: "3.0.1"
   pdf:
     dependency: "direct main"
     description:

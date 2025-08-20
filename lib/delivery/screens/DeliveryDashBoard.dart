@@ -111,33 +111,6 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
       setState(() {});
     });
     selectedStatusIndex = widget.selectedIndex;
-    // await getAppSetting().then((value) {
-    //   print(
-    //       "-------------------------------${value.otpVerifyOnPickupDelivery}");
-    //   appStore
-    //       .setOtpVerifyOnPickupDelivery(value.otpVerifyOnPickupDelivery == 1);
-    //   appStore.setCurrencyCode(value.currencyCode ?? CURRENCY_CODE);
-    //   appStore.setCurrencySymbol(value.currency ?? CURRENCY_SYMBOL);
-    //   appStore.setCurrencyPosition(
-    //       value.currencyPosition ?? CURRENCY_POSITION_LEFT);
-    //   appStore.isVehicleOrder = value.isVehicleInOrder ?? 0;
-    //   appStore.setSiteEmail(value.siteEmail ?? "");
-    //   appStore.setCopyRight(value.siteCopyright ?? "");
-    //   //   appStore.setOrderTrackingIdPrefix(value.orderTrackingIdPrefix ?? "");
-    //   appStore.setIsInsuranceAllowed(value.isInsuranceAllowed ?? "0");
-    //   appStore.setInsurancePercentage(value.insurancePercentage ?? "0");
-    //   appStore.setInsuranceDescription(value.insuranceDescription ?? "");
-    //   appStore.setMaxAmountPerMonth(value.maxEarningsPerMonth ?? '');
-    //   appStore.setClaimDuration(value.claimDuration ?? "");
-    //   // setValue(IS_VERIFIED_DELIVERY_MAN, (value.isVerifiedDeliveryMan.validate() == 1));
-    // }).catchError((error) {
-    //   log(error.toString());
-    // });
-
-    // if (await checkPermission()) {
-    //   await checkLocationPermission(context);
-    // }
-
     scrollController.addListener(() {
       if (scrollController.position.pixels ==
           scrollController.position.maxScrollExtent) {
@@ -154,7 +127,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
           duration: Duration(milliseconds: 500), curve: Curves.easeInOut);
     }
     await getOrderListApiCall();
-    afterBuildCreated(() => appStore.setLoading(true));
+    // afterBuildCreated(() => appStore.setLoading(true));
   }
 
   @override
@@ -166,154 +139,6 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
       default:
     }
   }
-
-  // void onResumed() async {
-  //   await checkLocationPermission(context);
-  //   setState(() {});
-  // }
-
-  // getOrderListApiCall() async {
-  //   appStore.setLoading(true);
-  //   await getDeliveryBoyOrderList(
-  //           page: currentPage,
-  //           deliveryBoyID: getIntAsync(USER_ID),
-  //           cityId: getIntAsync(CITY_ID),
-  //           countryId: getIntAsync(COUNTRY_ID),
-  //           orderStatus: statusList[selectedStatusIndex])
-  //       .then((value) {
-  //     appStore.setLoading(false);
-  //     appStore.setAllUnreadCount(value.allUnreadCount.validate());
-  //     currentPage = value.pagination!.currentPage!;
-  //     totalPage = value.pagination!.totalPages!;
-  //     if (currentPage == 1) {
-  //       orderData.clear();
-  //     }
-  //     orderData.addAll(value.data!);
-  //     // default
-  //     setState(() {});
-  //     appStore.setLoading(false);
-  //   }).catchError((error) {
-  //     log(error);
-  //   }).whenComplete(() {
-  //     appStore.setLoading(false);
-  //   });
-  // }
-
-  // 测试：直接使用模拟数据，而不调用真实 API
-  // getOrderListApiCall() async {
-  //   print("getOrderListApiCall invoked");
-  //   // 测试：直接使用模拟数据，而不调用真实 API
-  //   final Map<String, dynamic> sampleData = {
-  //     "pagination": {
-  //       "total_items": 1,
-  //       "per_page": 10,
-  //       "currentPage": 1,
-  //       "totalPages": 1,
-  //     },
-  //     "data": [
-  //       {
-  //         "id": 101,
-  //         "order_tracking_id": "ORD-20250310001",
-  //         "client_id": 1,
-  //         "client_name": "John Doe",
-  //         "date": "2025-03-20",
-  //         "pickup_point": {
-  //           "name": "Pickup Point",
-  //           "address": "123 Pickup St",
-  //           "latitude": "37.785834",
-  //           "longitude": "-122.406417",
-  //           "description": "Pickup description",
-  //           "contact_number": "1234567890",
-  //           "start_time": "2025-03-20T09:00:00",
-  //           "end_time": "2025-03-20T10:00:00",
-  //           "instruction": "Be on time"
-  //         },
-  //         "delivery_point": {
-  //           "name": "Delivery Point",
-  //           "address": "456 Delivery Ave",
-  //           "latitude": "37.781234",
-  //           "longitude": "-122.407654",
-  //           "description": "Delivery description",
-  //           "contact_number": "0987654321",
-  //           "start_time": "2025-03-20T11:00:00",
-  //           "end_time": "2025-03-20T12:00:00",
-  //           "instruction": "Ring the bell"
-  //         },
-  //         "country_id": 1,
-  //         "country_name": "USA",
-  //         "city_id": 1,
-  //         "city_name": "San Francisco",
-  //         "parcel_type": "Small",
-  //         "total_weight": 1.5,
-  //         "total_distance": 5.0,
-  //         "pickup_datetime": "2025-03-20T09:30:00",
-  //         "delivery_datetime": "2025-03-20T11:30:00",
-  //         "parent_order_id": null,
-  //         "status": "ORDER_ASSIGNED",
-  //         "payment_id": 1001,
-  //         "payment_type": "Cash",
-  //         "payment_status": "Pending",
-  //         "payment_collect_from": "Delivery",
-  //         "delivery_man_id": 2739,
-  //         "delivery_man_name": "Delivery Man",
-  //         "bid_type": 0,
-  //         "fixed_charges": 5.0,
-  //         "vehicle_charge": 2.0,
-  //         "extra_charges": 1.0,
-  //         "total_amount": 8.0,
-  //         "reason": "",
-  //         "pickup_confirm_by_client": 1,
-  //         "pickup_confirm_by_delivery_man": 1,
-  //         "pickup_time_signature": null,
-  //         "delivery_time_signature": null,
-  //         "deleted_at": null,
-  //         "return_order_id": false,
-  //         "weight_charge": 0.5,
-  //         "distance_charge": 0.8,
-  //         "total_parcel": 1,
-  //         "auto_assign": 1,
-  //         "cancelled_delivery_man_ids": [],
-  //         "vehicle_id": 15,
-  //         "vehicle_data": {
-  //           "id": 15,
-  //           "vehicleTypeName": "SmallCar",
-  //           "vehicleTypeId": "3a18c3a7-9f83-aa47-f9e0-99fe604bc5e2",
-  //           "driverName": "Driver 1",
-  //           "vehicle_register_no": "ABC123"
-  //         },
-  //         "vehicle_image": "https://example.com/vehicle.png",
-  //         "invoice": "https://example.com/invoice.pdf",
-  //         "insurance_charge": 0.5,
-  //         "base_total": 7.5,
-  //         "isClaimed": 0,
-  //         "extra_charge_list": [],
-  //         "city_details_list": {},
-  //         "rescheduledatetime": null,
-  //         "is_reschedule": 0,
-  //         "packaging_symbols": []
-  //       }
-  //     ],
-  //     "all_unread_count": 0,
-  //     "wallet_data": null
-  //   };
-  //   try {
-  //     appStore.setLoading(true);
-  //     // 使用 OrderListModel.fromJson() 进行解析
-  //     var orderListModel = OrderListModel.fromJson(toStringKeyMap(sampleData));
-  //     // 更新分页信息
-  //     currentPage = orderListModel.pagination?.currentPage ?? 1;
-  //     totalPage = orderListModel.pagination?.totalPages ?? 1;
-  //     // 清空以前的数据并添加新的数据
-  //     orderData.clear();
-  //     orderData.addAll(orderListModel.data ?? []);
-  //   } catch (e) {
-  //     log("Error in getOrderListApiCall: $e");
-  //   } finally {
-  //     appStore.setLoading(false);
-  //   }
-  //   setState(() {});
-  //   // appStore.setLoading(false);
-  // }
 
   getOrderListApiCall() async {
     print("getOrderListApiCall invoked");
@@ -327,12 +152,20 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
       String enumStatus = convertStatusToEnum(selectedStatus); // 转换为枚举字符串
       int statusCode = convertStatusToInt(enumStatus); // 将枚举字符串转换为整数
 
-      // 调用 RoutePlanService 获取数据
+      // 读取本地选中的日期（没有则用今天）
+      final String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final dynamic saved = SpUtil.getJSON('selected_date');
+      final String taskDate = (saved != null && saved.toString().isNotEmpty)
+          ? saved.toString()
+          : today;
+
+      // 调用 RoutePlanService 获取数据（带 TaskDate）
       final routePlanService = RoutePlanService();
       final response =
           await routePlanService.getRoutePlansByVehicleIdAndStatusCode(
         vehicleId: SpUtil.getJSON("vehicleId"),
-        statusCode: statusCode, // 使用转换后的整数状态码
+        statusCode: statusCode,
+        taskDate: taskDate, // 新增
       );
 
       // 转换新格式为现有格式
@@ -353,26 +186,23 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
         rawOrderItems = [];
       }
 
-      // 更新分页信息
+      // 更新分页、排序、分组
       currentPage = orderListModel.pagination?.currentPage ?? 1;
       totalPage = orderListModel.pagination?.totalPages ?? 1;
 
-      // 清空以前的数据并添加新的数据
-      orderData.clear();
-      orderData.addAll(orderListModel.data ?? []);
+      orderData
+        ..clear()
+        ..addAll(orderListModel.data ?? []);
 
-      // 排序逻辑
       if (statusCode == 1) {
-        // 按 pickupPoint.taskSequence 排序
         orderData.sort((a, b) => (a.pickupPoint?.taskSequence ?? 0)
             .compareTo(b.pickupPoint?.taskSequence ?? 0));
       } else if (statusCode == 3) {
-        // 按 deliveryPoint.taskSequence 排序
         orderData.sort((a, b) => (a.deliveryPoint?.taskSequence ?? 0)
             .compareTo(b.deliveryPoint?.taskSequence ?? 0));
       }
 
-      groupOrderData(); // 分组数据
+      groupOrderData();
     } catch (e) {
       log("Error in getOrderListApiCall: $e");
     } finally {
@@ -626,45 +456,39 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                 setState(() {});
               },
               children: statusList.map((e) {
-                // 根据状态 e 返回不同的 Widget
                 return Stack(
                   children: [
-                    if (groupedOrderDataList.isEmpty)
+                    if (appStore.isLoading)
                       Center(child: CircularProgressIndicator())
                     else if (statusList[selectedStatusIndex] == ORDER_ASSIGNED)
-                      SingleChildScrollView(
-                        child: ExpansionPanelList(
-                          expansionCallback: (int index, bool isExpanded) {
-                            isExpanded = groupedOrderDataList[index].isExpanded;
-                            try {
-                              setState(() {
-                                groupedOrderDataList[index].isExpanded =
-                                    !isExpanded;
-                              });
-                            } catch (e, stackTrace) {
-                              print("Error in expansionCallback: $e");
-                              print("StackTrace: $stackTrace");
-                            }
-                          },
-                          children: groupedOrderDataList.map((group) {
-                            return ExpansionPanel(
-                              headerBuilder:
-                                  (BuildContext context, bool isExpanded) {
-                                return ListTile(
-                                  title: Text(
-                                    "🏚️: ${group.deliveryOrderId ?? '未知地址'}",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                  trailing: statusList[selectedStatusIndex] ==
-                                          ORDER_ASSIGNED
-                                      ? ElevatedButton(
+                      // Assigned：有数据展示分组；没数据展示空态
+                      (groupedOrderDataList.isEmpty
+                          ? Center(child: Text('No tasks for this date'))
+                          : SingleChildScrollView(
+                              child: ExpansionPanelList(
+                                expansionCallback:
+                                    (int index, bool isExpanded) {
+                                  setState(() {
+                                    groupedOrderDataList[index].isExpanded =
+                                        !groupedOrderDataList[index].isExpanded;
+                                  });
+                                },
+                                children: groupedOrderDataList.map((group) {
+                                  return ExpansionPanel(
+                                    headerBuilder: (BuildContext context,
+                                        bool isExpanded) {
+                                      return ListTile(
+                                        title: Text(
+                                          "🏚️: ${group.deliveryOrderId ?? '未知地址'}",
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15),
+                                        ),
+                                        trailing: ElevatedButton(
                                           onPressed: () async {
                                             appStore.setLoading(true);
                                             final routePlanService =
-                                                 RoutePlanService();
+                                                RoutePlanService();
                                             for (var order
                                                 in group.orders ?? []) {
                                               await routePlanService
@@ -689,46 +513,45 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                             padding: EdgeInsets.symmetric(
                                                 horizontal: 16, vertical: 8),
                                           ),
-                                          child: Text(
-                                            "Pick up",
-                                            style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 13),
-                                          ),
-                                        )
-                                      : null,
-                                );
-                              },
-                              body: Column(
-                                children: group.orders!
-                                    .map((order) => Container(
-                                          margin: EdgeInsets.symmetric(
-                                              horizontal: 16),
-                                          child: orderCard(order),
-                                        ))
-                                    .toList(),
+                                          child: Text("Pick up",
+                                              style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 13)),
+                                        ),
+                                      );
+                                    },
+                                    body: Column(
+                                      children: group.orders!
+                                          .map((order) => Container(
+                                                margin: EdgeInsets.symmetric(
+                                                    horizontal: 16),
+                                                child: orderCard(order),
+                                              ))
+                                          .toList(),
+                                    ),
+                                    isExpanded: group.isExpanded,
+                                  );
+                                }).toList(),
                               ),
-                              isExpanded: group.isExpanded,
-                            );
-                          }).toList(),
-                        ),
-                      )
+                            ))
                     else
-                      SingleChildScrollView(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 12), // 整体边距
-                          child: Column(
-                            children: orderData
-                                .map((order) => Container(
-                                      margin:
-                                          EdgeInsets.only(bottom: 16), // 卡片间距
-                                      child: orderCard(order),
-                                    ))
-                                .toList(),
-                          ),
-                        ),
-                      ),
+                      // 其他 tab：空列表也给空态
+                      (orderData.isEmpty
+                          ? Center(child: Text('No tasks'))
+                          : SingleChildScrollView(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 12),
+                                child: Column(
+                                  children: orderData
+                                      .map((order) => Container(
+                                            margin: EdgeInsets.only(bottom: 16),
+                                            child: orderCard(order),
+                                          ))
+                                      .toList(),
+                                ),
+                              ),
+                            )),
                   ],
                 );
               }).toList(),

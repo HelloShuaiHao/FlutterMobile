@@ -209,12 +209,14 @@ class RoutePlanService {
 
   Future<Map<String, int>> getTaskCountByStatusName({
     required String vehicleId,
+    String? taskDate, // 新增参数
   }) async {
     try {
       final response = await HttpUtils.get<Map<String, dynamic>>(
         '/api/delivery/transport-tasks/count-by-status-name',
         params: {
           'VehicleId': vehicleId,
+          if (taskDate != null) 'TaskDate': taskDate, // 添加 TaskDate 参数
         },
       );
 

@@ -261,7 +261,7 @@ class LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   16.height,
-                  Text(language.email, style: primaryTextStyle()),
+                  Text(language.userid, style: primaryTextStyle()),
                   8.height,
                   AppTextField(
                     controller: emailController,

@@ -90,8 +90,8 @@
       {
         "screenId": "3",
         "keyword_id": 13,
-        "keyword_name": "email",
-        "keyword_value": "Email"
+        "keyword_name": "id",
+        "keyword_value": "ID"
       },
       {
         "screenId": "3",
@@ -3137,6 +3137,15 @@
       },
       {
         "screenId": "43",
+        "keyword_id": 10399,
+        "keyword_name": "pickedUpOrder",
+        "keyword_value": {
+          "en": "Picked up order",
+          "zh": "已取件订单"
+        }
+      },
+      {
+        "screenId": "43",
         "keyword_id": 400,
         "keyword_name": "cancelledOrder",
         "keyword_value": {
@@ -3736,7 +3745,7 @@
         "screenId": "55",
         "keyword_id": 536,
         "keyword_name": "id",
-        "keyword_value": "Id"
+        "keyword_value": "ID"
       },
       {
         "screenId": "55",

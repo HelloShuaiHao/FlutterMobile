@@ -19,7 +19,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "u.nus.edu.astar.demo"
+    namespace = "sg.glsapp.gls"
 //    signingConfigs {
 //         release {
 //             storeFile file('/home/meet09/Downloads/local_delivery.jks')
@@ -52,7 +52,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "u.nus.edu.astar.demo"
+        applicationId "sg.glsapp.gls"
         minSdkVersion 31
         targetSdkVersion 34
         versionCode 50

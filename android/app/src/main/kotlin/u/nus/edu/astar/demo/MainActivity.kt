@@ -1,4 +1,4 @@
-package u.nus.edu.astar.demo
+package sg.glsapp.gls
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine

@@ -651,17 +651,17 @@ class _DHomeFragmentState extends State<DHomeFragment>
                   style: boldTextStyle(color: Colors.white)),
             ],
           ).onTap(() {
-            // DeliveryDashBoard().launch(context).then((value) {
-            //   setState(() {});
-            //   getDashboardCountDataApi();
-            // });
+            DeliveryDashBoard().launch(context).then((value) {
+              setState(() {});
+              getDashboardCountDataApi();
+            });
 
             // 修改跳转逻辑为 TaskListScreen
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => PreDeliveryScanScreen(tasks: exampleTasks),
-              ),
-            );
+            // Navigator.of(context).push(
+            //   MaterialPageRoute(
+            //     builder: (_) => PreDeliveryScanScreen(tasks: exampleTasks),
+            //   ),
+            // );
           }),
         ),
       ),

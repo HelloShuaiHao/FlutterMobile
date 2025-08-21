@@ -230,6 +230,7 @@ const TOTAL_EARNING = 'commission';
 const WALLET_BALANCE = 'walletBalance';
 const PENDING_WITHDRAW_REQUEST = 'pendingWithdReq';
 const COMPLETED_WITHDRAW_REQUEST = 'completedWithReq';
+const PICKED_UP_ORDER = 'pickedUpOrder';
 //endregion
 
 //region transaction keys

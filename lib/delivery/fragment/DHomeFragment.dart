@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:mighty_delivery/bidding/extensions/extension_util/animation_extensions.dart';
+import 'package:mighty_delivery/delivery/screens/TaskListScreen.dart';
 import 'package:mighty_delivery/extensions/extension_util/context_extensions.dart';
 import 'package:mighty_delivery/main/network/test_signalR.dart';
 import 'package:mighty_delivery/main/screens/LanguageScreen.dart';
@@ -16,6 +17,7 @@ import '../../bidding/delivery/screens/DeliveryBidListScreen.dart';
 import '../../bidding/utils/Constants.dart';
 import '../../delivery/screens/EarningHistoryScreen.dart';
 import '../../delivery/screens/FilterCountScreen.dart';
+import '../../delivery/screens/PreDeliveryScanScreen.dart';
 
 import '../../extensions/extension_util/int_extensions.dart';
 import '../../extensions/extension_util/num_extensions.dart';
@@ -55,6 +57,33 @@ import 'package:intl/intl.dart';
 // 日期格式化工具
 final DateFormat dateFormat = DateFormat('yyyy-MM-dd');
 
+// 示例任务数据
+final List<TaskItem> exampleTasks = const [
+  TaskItem(
+    id: '74649349',
+    address:
+        'CHANGI HYPER BUSINESS PK #2-11 8 8 Changi Business Park Ave 1\nSingapore 486018',
+    timeWindow: '8:00 AM — 10:00 AM',
+    contactName: 'LinksPoints Test DC Customer',
+    modules: [
+      Module(name: 'ZBK-B', code: '74649349,ZBK-B-01'),
+      Module(name: 'ZGN-A', code: '74649349,ZGN-A-01'),
+      Module(name: 'ZGN-W', code: '74649349,ZGN-W-01'),
+    ],
+  ),
+  TaskItem(
+    id: '74649427',
+    address:
+        'CHANGI HYPER BUSINESS PK #8-158 8, 8 Changi Bus\nSingapore 486018',
+    timeWindow: '8:00 AM — 10:00 AM',
+    contactName: 'LinksPoints Test DC Customer',
+    modules: [
+      Module(name: 'ZBK-B', code: '74649427,ZBK-B-01'),
+      Module(name: 'ZGN-A', code: '74649427,ZGN-A-01'),
+    ],
+  ),
+];
+
 class DHomeFragment extends StatefulWidget {
   @override
   State<DHomeFragment> createState() => _DHomeFragmentState();
@@ -81,6 +110,7 @@ class _DHomeFragmentState extends State<DHomeFragment>
   List items = [
     TODAY_ORDER,
     REMAINING_ORDER,
+    PICKED_UP_ORDER, // 新增 PickedUp tab
     COMPLETED_ORDER,
     INPROGRESS_ORDER,
     // TOTAL_EARNING,
@@ -106,9 +136,19 @@ class _DHomeFragmentState extends State<DHomeFragment>
   Future<void> fetchTaskCountByStatusName() async {
     final routePlanService = RoutePlanService();
     String vehicleId = SpUtil.getJSON("vehicleId");
+
+    // 从 SharedPreferences 获取保存的日期
+    String? savedDateStr = SpUtil.getJSON('selected_date');
+    String taskDate =
+        savedDateStr ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+
     try {
-      statusCountMap =
-          await routePlanService.getTaskCountByStatusName(vehicleId: vehicleId);
+      statusCountMap = await routePlanService.getTaskCountByStatusName(
+        vehicleId: vehicleId,
+        taskDate: taskDate, // 传递 TaskDate 参数
+      );
+      log("Fetched statusCountMap: $statusCountMap"); // 打印数据
+
       setState(() {});
     } catch (e) {
       print("Error fetching status count: $e");
@@ -118,13 +158,19 @@ class _DHomeFragmentState extends State<DHomeFragment>
   String getCount(int index) {
     switch (index) {
       case 0:
-        // 总和
-        int total = statusCountMap.values.fold(0, (sum, val) => sum + val);
+        // 总和：包括 Assigned、Delivered、Picked Up 等状态
+        int total = (statusCountMap['Assigned'] ?? 0) +
+            (statusCountMap['Delivered'] ?? 0) +
+            (statusCountMap['Picked Up'] ?? 0); // 确保包含 Picked Up
         return total.toString();
       case 1:
         return (statusCountMap['Assigned'] ?? 0).toString();
       case 2:
         return (statusCountMap['Delivered'] ?? 0).toString();
+      case 3:
+        return (statusCountMap['Picked Up'] ?? 0).toString(); // Picked Up 状态
+      case 4:
+        return (statusCountMap['Cancelled'] ?? 0).toString();
       default:
         return "0";
     }
@@ -135,36 +181,89 @@ class _DHomeFragmentState extends State<DHomeFragment>
   }
 
   Future<void> goToCountScreen(int index) async {
-    if (index == 0 || index == 1) {
-      DeliveryDashBoard(
-        selectedIndex: index,
-      ).launch(context).then((value) {
-        setState(() {});
-        getDashboardCountDataApi();
-      });
-    } else if (index == 2) {
-      DeliveryDashBoard(
-        selectedIndex: 2, // 确保索引在范围内
-      ).launch(context).then((value) {
-        setState(() {});
-        getDashboardCountDataApi();
-      });
-    } else if (index == 3) {
-      DeliveryDashBoard(
-        selectedIndex: 3,
-      ).launch(context).then((value) {
-        setState(() {});
-        getDashboardCountDataApi();
-      });
-    } else {
-      // 处理其他情况
-      log("Invalid index: $index");
+    // 根据索引跳转到不同的界面
+    switch (index) {
+      case 0: // Today Order
+        Navigator.of(context)
+            .push(
+          MaterialPageRoute(
+            builder: (_) => DeliveryDashBoard(selectedIndex: 0),
+          ),
+        )
+            .then((value) {
+          fetchTaskCountByStatusName(); // 刷新任务状态数据
+          getDashboardCountDataApi(); // 刷新仪表盘统计数据
+          setState(() {}); // 更新界面
+        });
+        break;
+
+      case 1: // Remaining Order
+        Navigator.of(context)
+            .push(
+          MaterialPageRoute(
+            builder: (_) => DeliveryDashBoard(selectedIndex: 0),
+          ),
+        )
+            .then((value) {
+          fetchTaskCountByStatusName();
+          getDashboardCountDataApi();
+          setState(() {});
+        });
+        break;
+
+      case 2: // Picked Up Order
+        Navigator.of(context)
+            .push(
+          MaterialPageRoute(
+            builder: (_) => DeliveryDashBoard(selectedIndex: 1),
+          ),
+        )
+            .then((value) {
+          fetchTaskCountByStatusName();
+          getDashboardCountDataApi();
+          setState(() {});
+        });
+        break;
+
+      case 3: // Completed Order
+        Navigator.of(context)
+            .push(
+          MaterialPageRoute(
+            builder: (_) => DeliveryDashBoard(selectedIndex: 2),
+          ),
+        )
+            .then((value) {
+          fetchTaskCountByStatusName();
+          getDashboardCountDataApi();
+          setState(() {});
+        });
+        break;
+
+      case 4: // Cancelled Order
+        Navigator.of(context)
+            .push(
+          MaterialPageRoute(
+            builder: (_) => DeliveryDashBoard(selectedIndex: 3),
+          ),
+        )
+            .then((value) {
+          fetchTaskCountByStatusName();
+          getDashboardCountDataApi();
+          setState(() {});
+        });
+        break;
+
+      default:
+        log("Invalid index: $index");
+        break;
     }
   }
 
   @override
   void initState() {
     super.initState();
+    fetchTaskCountByStatusName(); // 初始化时获取 count
+
     print("当前进入 的页面是：${DHomeFragment()}");
 
     // Listen for language updates: When a LiveStream message for 'UpdateLanguage' is received,
@@ -202,6 +301,12 @@ class _DHomeFragmentState extends State<DHomeFragment>
 
     // 获取不同状态的task的数量
     fetchTaskCountByStatusName();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    fetchTaskCountByStatusName(); // 每次依赖发生变化时刷新 count
   }
 
   Future<void> init() async {
@@ -461,7 +566,6 @@ class _DHomeFragmentState extends State<DHomeFragment>
                         } else {
                           initialDate = DateTime.now();
                         }
-                        
 
                         DatePicker.showDatePicker(
                           context,
@@ -473,6 +577,8 @@ class _DHomeFragmentState extends State<DHomeFragment>
                           onConfirm: (picked) {
                             String formatted = dateFormat.format(picked);
                             SpUtil.setJSON('selected_date', formatted);
+                            fetchTaskCountByStatusName(); // 刷新 count
+
                             setState(() {});
                             showDialog(
                               context: context,
@@ -545,10 +651,17 @@ class _DHomeFragmentState extends State<DHomeFragment>
                   style: boldTextStyle(color: Colors.white)),
             ],
           ).onTap(() {
-            DeliveryDashBoard().launch(context).then((value) {
-              setState(() {});
-              getDashboardCountDataApi();
-            });
+            // DeliveryDashBoard().launch(context).then((value) {
+            //   setState(() {});
+            //   getDashboardCountDataApi();
+            // });
+
+            // 修改跳转逻辑为 TaskListScreen
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => PreDeliveryScanScreen(tasks: exampleTasks),
+              ),
+            );
           }),
         ),
       ),

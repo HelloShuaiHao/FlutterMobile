@@ -31,6 +31,7 @@ class BaseLanguage {
   String get signIn => getContentValueFromKey(12);
 
   String get email => getContentValueFromKey(13);
+  String get id => getContentValueFromKey(13);
 
   String get password => getContentValueFromKey(14);
 
@@ -801,6 +802,7 @@ class BaseLanguage {
   String get todayOrder => getContentValueFromKey(397);
 
   String get remainingOrder => getContentValueFromKey(398);
+  String get pickedUpOrder => getContentValueFromKey(10399);
 
   String get completedOrder => getContentValueFromKey(399);
 
@@ -1076,7 +1078,7 @@ class BaseLanguage {
 
   String get ownerNumber => getContentValueFromKey(535);
 
-  String get id => getContentValueFromKey(536);
+  String get userid => getContentValueFromKey(536);
 
   String get active => getContentValueFromKey(537);
 

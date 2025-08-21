@@ -277,6 +277,8 @@ String countName(String count) {
     return language.pendingWithdReq;
   } else if (count == COMPLETED_WITHDRAW_REQUEST) {
     return language.completedWithReq;
+  } else if (count == PICKED_UP_ORDER) {
+    return language.pickedUpOrder; // 新增 PickedUp 订单状态
   }
   return "";
 }

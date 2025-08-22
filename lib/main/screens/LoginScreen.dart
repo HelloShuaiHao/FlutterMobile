@@ -99,7 +99,7 @@ class LoginScreenState extends State<LoginScreen> {
     if (formKey.currentState!.validate()) {
       formKey.currentState!.save();
       hideKeyboard(context);
-      if (isAcceptedTc) {
+      if (true) {
         appStore.setLoading(true);
 
         if (mIsCheck) {
@@ -352,51 +352,51 @@ class LoginScreenState extends State<LoginScreen> {
                   16.height,
                   Row(
                     children: [
-                      SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: Checkbox(
-                          shape:
-                              RoundedRectangleBorder(borderRadius: radius(4)),
-                          checkColor: Colors.white,
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                          focusColor: ColorUtils.colorPrimary,
-                          activeColor: ColorUtils.colorPrimary,
-                          value: isAcceptedTc,
-                          onChanged: (bool? value) async {
-                            isAcceptedTc = value!;
-                            setState(() {});
-                          },
-                        ),
-                      ),
-                      10.width,
-                      RichText(
-                        text: TextSpan(children: [
-                          TextSpan(
-                              text: '${language.iAgreeToThe} ',
-                              style: secondaryTextStyle()),
-                          TextSpan(
-                            text: language.termOfService,
-                            style: boldTextStyle(
-                                color: ColorUtils.colorPrimary, size: 14),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () {
-                                commonLaunchUrl("");
-                              },
-                          ),
-                          TextSpan(text: ' & ', style: secondaryTextStyle()),
-                          TextSpan(
-                            text: language.privacyPolicy,
-                            style: boldTextStyle(
-                                color: ColorUtils.colorPrimary, size: 14),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () {
-                                commonLaunchUrl("");
-                              },
-                          ),
-                        ]),
-                      ).expand()
+                      // SizedBox(
+                      //   height: 20,
+                      //   width: 20,
+                      //   child: Checkbox(
+                      //     shape:
+                      //         RoundedRectangleBorder(borderRadius: radius(4)),
+                      //     checkColor: Colors.white,
+                      //     materialTapTargetSize:
+                      //         MaterialTapTargetSize.shrinkWrap,
+                      //     focusColor: ColorUtils.colorPrimary,
+                      //     activeColor: ColorUtils.colorPrimary,
+                      //     value: isAcceptedTc,
+                      //     onChanged: (bool? value) async {
+                      //       isAcceptedTc = value!;
+                      //       setState(() {});
+                      //     },
+                      //   ),
+                      // ),
+                      // 10.width,
+                      // RichText(
+                      //   text: TextSpan(children: [
+                      //     TextSpan(
+                      //         text: '${language.iAgreeToThe} ',
+                      //         style: secondaryTextStyle()),
+                      //     TextSpan(
+                      //       text: language.termOfService,
+                      //       style: boldTextStyle(
+                      //           color: ColorUtils.colorPrimary, size: 14),
+                      //       recognizer: TapGestureRecognizer()
+                      //         ..onTap = () {
+                      //           commonLaunchUrl("");
+                      //         },
+                      //     ),
+                      //     TextSpan(text: ' & ', style: secondaryTextStyle()),
+                      //     TextSpan(
+                      //       text: language.privacyPolicy,
+                      //       style: boldTextStyle(
+                      //           color: ColorUtils.colorPrimary, size: 14),
+                      //       recognizer: TapGestureRecognizer()
+                      //         ..onTap = () {
+                      //           commonLaunchUrl("");
+                      //         },
+                      //     ),
+                      //   ]),
+                      // ).expand()
                     ],
                   ),
                   30.height,

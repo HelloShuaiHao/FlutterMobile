@@ -143,15 +143,17 @@ class _DHomeFragmentState extends State<DHomeFragment>
         savedDateStr ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
 
     try {
+      appStore.setLoading(true); // 显示加载状态
       statusCountMap = await routePlanService.getTaskCountByStatusName(
         vehicleId: vehicleId,
         taskDate: taskDate, // 传递 TaskDate 参数
       );
       log("Fetched statusCountMap: $statusCountMap"); // 打印数据
-
       setState(() {});
     } catch (e) {
       print("Error fetching status count: $e");
+    } finally {
+      appStore.setLoading(false); // 隐藏加载状态
     }
   }
 
@@ -541,7 +543,48 @@ class _DHomeFragmentState extends State<DHomeFragment>
                 physics: BouncingScrollPhysics(
                     parent: AlwaysScrollableScrollPhysics()),
                 children: [
-                  12.height,
+                  9.height,
+                  // 添加扫描 area
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    margin: EdgeInsets.only(bottom: 12),
+                    decoration: boxDecorationWithRoundedCorners(
+                      borderRadius: BorderRadius.circular(12),
+                      backgroundColor: const Color.fromARGB(255, 203, 248, 248),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Scanning Area",
+                          style: boldTextStyle(size: 16, color: Colors.black),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            // 扫描逻辑
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => PreDeliveryScanScreen(
+                                  tasks: exampleTasks,
+                                ),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: ColorUtils.colorPrimary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            "Scan",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  1.height,
                   latestOrderToCancelBid != null
                       ? bidCancelView(order: latestOrderToCancelBid ?? null)
                       : bidAcceptView(order: latestOrder ?? null),
@@ -577,7 +620,9 @@ class _DHomeFragmentState extends State<DHomeFragment>
                           onConfirm: (picked) {
                             String formatted = dateFormat.format(picked);
                             SpUtil.setJSON('selected_date', formatted);
-                            fetchTaskCountByStatusName(); // 刷新 count
+
+                            // 显示加载状态并刷新数据
+                            fetchTaskCountByStatusName();
 
                             setState(() {});
                             showDialog(
@@ -633,8 +678,10 @@ class _DHomeFragmentState extends State<DHomeFragment>
               ),
             ),
             Observer(
-                builder: (context) => Positioned.fill(
-                    child: loaderWidget().visible(appStore.isLoading))),
+              builder: (context) => Positioned.fill(
+                child: loaderWidget().visible(appStore.isLoading),
+              ),
+            ),
           ],
         ),
       ),

@@ -3113,8 +3113,8 @@
         "keyword_id": 397,
         "keyword_name": "todayOrder",
         "keyword_value": {
-          "en": "Today order",
-          "zh": "今日订单"
+          "en": "Total Orders",
+          "zh": "全部订单"
         }
       },
       {
@@ -3122,8 +3122,8 @@
         "keyword_id": 398,
         "keyword_name": "remainingOrder",
         "keyword_value": {
-          "en": "Remaining order",
-          "zh": "剩余订单"
+          "en": "Pending orders",
+          "zh": "待处理订单"
         }
       },
       {
@@ -3745,7 +3745,7 @@
         "screenId": "55",
         "keyword_id": 536,
         "keyword_name": "id",
-        "keyword_value": "ID"
+        "keyword_value": "Driver ID"
       },
       {
         "screenId": "55",

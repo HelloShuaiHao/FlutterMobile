@@ -194,6 +194,19 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
         ..clear()
         ..addAll(orderListModel.data ?? []);
 
+      // 初始化 itemSelected
+      for (var order in orderData) {
+        order.itemSelected = List.generate(
+          order.taskItems?.length ?? 0,
+          (index) {
+            final item = order.taskItems![index];
+            final statusCode = item['itemStatusCode']?.toString();
+            print("Task Item Status Code: $statusCode"); // 调试输出
+            return statusCode == 'InProgress'; // 默认选中 InProgress 状态
+          },
+        );
+      }
+
       if (statusCode == 1) {
         orderData.sort((a, b) => (a.pickupPoint?.taskSequence ?? 0)
             .compareTo(b.pickupPoint?.taskSequence ?? 0));
@@ -645,12 +658,18 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
   }
 
   Widget orderCard(OrderData data) {
-    // 初始化 itemSelected 长度
     if (data.itemSelected.length != (data.taskItems?.length ?? 0)) {
-      data.itemSelected =
-          List.generate(data.taskItems?.length ?? 0, (_) => false);
+      data.itemSelected = List.generate(
+        data.taskItems?.length ?? 0,
+        (index) {
+          final item = data.taskItems![index];
+          final statusCode = item['itemStatusCode']?.toString();
+          print("Item Status Code: $statusCode"); // 调试输出
+          return statusCode == 'InProgress'; // 确保匹配字符串
+        },
+      );
+      print("Item Selected After: ${data.itemSelected}"); // 调试输出
     }
-
     bool allSelected =
         data.itemSelected.isNotEmpty && data.itemSelected.every((e) => e);
     bool partiallySelected = data.itemSelected.any((e) => e) && !allSelected;
@@ -811,216 +830,6 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                             } else {
                               toast('需要完成拍照和签名才能确认配送');
                             }
-
-                            // 原有的确认逻辑
-                            // return showInDialog(
-                            //   barrierDismissible: true,
-                            //   getContext,
-                            //   builder: (p0) {
-                            //     return StatefulBuilder(
-                            //         builder: (context, selectedImagesUpdate) {
-                            //       // This is used to toggle the visibility of the reschedule form
-
-                            //       return Form(
-                            //         key: rescheduleFormKey,
-                            //         child: SingleChildScrollView(
-                            //           child: Container(
-                            //             child: !appStore.isLoading
-                            //                 ? Column(
-                            //                     mainAxisSize: MainAxisSize.min,
-                            //                     mainAxisAlignment:
-                            //                         MainAxisAlignment.start,
-                            //                     crossAxisAlignment:
-                            //                         CrossAxisAlignment.start,
-                            //                     children: [
-                            //                       Row(
-                            //                         children: [
-                            //                           // Reschedule button - shows the reschedule form
-                            //                           commonButton(
-                            //                               language.reschedule,
-                            //                               size: 12, () {
-                            //                             selectedImagesUpdate(
-                            //                                 () {
-                            //                               val = 1;
-                            //                               print(
-                            //                                   "$val"); // This will make the reschedule form visible
-                            //                             });
-                            //                           }).expand(),
-
-                            //                           2.width,
-
-                            //                           // Departed button - triggers the API call and hides the form
-                            //                           commonButton(
-                            //                             language
-                            //                                 .confirmDelivery,
-                            //                             size: 12,
-                            //                             () async {
-                            //                               if (context.mounted) {
-                            //                                 Navigator.pop(
-                            //                                     context);
-                            //                               }
-                            //                               onTapData(
-                            //                                   orderData: data,
-                            //                                   orderStatus:
-                            //                                       statusList[
-                            //                                           selectedStatusIndex]);
-                            //                             },
-                            //                           ).expand(),
-                            //                         ],
-                            //                       ).visible(val == 0),
-
-                            //                       // Reschedule form (only visible when val == 1)
-                            //                       Column(
-                            //                         mainAxisAlignment:
-                            //                             MainAxisAlignment.start,
-                            //                         crossAxisAlignment:
-                            //                             CrossAxisAlignment
-                            //                                 .start,
-                            //                         children: [
-                            //                           Text(
-                            //                               language
-                            //                                   .rescheduleTitle,
-                            //                               style:
-                            //                                   boldTextStyle(),
-                            //                               textAlign:
-                            //                                   TextAlign.start),
-                            //                           10.height,
-                            //                           Divider(
-                            //                               color: dividerColor,
-                            //                               height: 1),
-                            //                           8.height,
-
-                            //                           // Reason text field
-                            //                           Text(language.reason,
-                            //                               style:
-                            //                                   boldTextStyle()),
-                            //                           12.height,
-                            //                           AppTextField(
-                            //                             isValidationRequired:
-                            //                                 true,
-                            //                             controller:
-                            //                                 reasonTitleTextEditingController,
-                            //                             textFieldType:
-                            //                                 TextFieldType.NAME,
-                            //                             errorThisFieldRequired:
-                            //                                 language
-                            //                                     .fieldRequiredMsg,
-                            //                             decoration:
-                            //                                 commonInputDecoration(
-                            //                                     hintText:
-                            //                                         language
-                            //                                             .reason),
-                            //                           ),
-                            //                           8.height,
-
-                            //                           // Date picker
-                            //                           Text(language.date,
-                            //                               style:
-                            //                                   boldTextStyle()),
-                            //                           12.height,
-                            //                           DateTimePicker(
-                            //                             controller:
-                            //                                 pickDateController,
-                            //                             type: DateTimePickerType
-                            //                                 .date,
-                            //                             initialDate:
-                            //                                 DateTime.now(),
-                            //                             firstDate:
-                            //                                 DateTime.now(),
-                            //                             lastDate: DateTime.now()
-                            //                                 .add(Duration(
-                            //                                     days: 30)),
-                            //                             onChanged: (value) {
-                            //                               pickDate =
-                            //                                   DateTime.parse(
-                            //                                       value);
-                            //                             },
-                            //                             validator: (value) {
-                            //                               if (value!.isEmpty)
-                            //                                 return language
-                            //                                     .fieldRequiredMsg;
-                            //                               return null;
-                            //                             },
-                            //                             decoration:
-                            //                                 commonInputDecoration(
-                            //                                     suffixIcon: Icons
-                            //                                         .calendar_today,
-                            //                                     hintText:
-                            //                                         language
-                            //                                             .date),
-                            //                           ),
-
-                            //                           16.height,
-
-                            //                           // Buttons inside the reschedule form
-                            //                           Row(
-                            //                             children: [
-                            //                               commonButton(
-                            //                                   language.cancel,
-                            //                                   size: 14, () {
-                            //                                 finish(getContext,
-                            //                                     0); // Close the dialog
-                            //                               }).expand(),
-
-                            //                               6.width,
-
-                            //                               // Reschedule button inside the form
-                            //                               commonButton(
-                            //                                   language
-                            //                                       .reschedule,
-                            //                                   size: 14,
-                            //                                   () async {
-                            //                                 if (rescheduleFormKey
-                            //                                     .currentState!
-                            //                                     .validate()) {
-                            //                                   // Trigger the reschedule API call
-                            //                                   // Example API call
-                            //                                   Map request = {
-                            //                                     "order_id":
-                            //                                         data.id,
-                            //                                     "reason":
-                            //                                         reasonTitleTextEditingController
-                            //                                             .text
-                            //                                             .toString(),
-                            //                                     "date": DateFormat(
-                            //                                             'yyyy-MM-dd')
-                            //                                         .format(
-                            //                                             pickDate!),
-                            //                                   };
-                            //                                   appStore
-                            //                                       .setLoading(
-                            //                                           true);
-                            //                                   await rescheduleOrder(
-                            //                                           request)
-                            //                                       .then(
-                            //                                           (value) {
-                            //                                     toast(value
-                            //                                         .message);
-                            //                                     appStore
-                            //                                         .setLoading(
-                            //                                             false);
-                            //                                     finish(context);
-                            //                                   });
-                            //                                 }
-                            //                               }).expand(),
-                            //                             ],
-                            //                           ),
-                            //                         ],
-                            //                       ).visible(val == 1),
-                            //                       // This makes the form visible based on the value of "val"
-                            //                     ],
-                            //                   )
-                            //                 : Observer(
-                            //                         builder: (context) =>
-                            //                             loaderWidget().visible(
-                            //                                 appStore.isLoading))
-                            //                     .center(),
-                            //           ),
-                            //         ),
-                            //       );
-                            //     });
-                            //   },
-                            // );
                           } else {
                             showConfirmDialogCustom(
                               context,
@@ -1210,8 +1019,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                     ...List.generate(data.taskItems?.length ?? 0, (i) {
                       final item = data.taskItems![i];
                       return Padding(
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 2), // 减小每行上下间距
+                        padding: const EdgeInsets.symmetric(vertical: 2),
                         child: Row(
                           children: [
                             // 图标
@@ -1230,16 +1038,41 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                 color: Colors.grey,
                               ),
                             ),
-                            // 8.width,
                             SizedBox(width: 5),
                             Expanded(
-                              child: Text(
-                                '${item['name'] ?? ''}',
-                                style: TextStyle(fontSize: 15),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('${item['name'] ?? ''}',
+                                      style: TextStyle(fontSize: 15)),
+                                  if (item['itemStatusCode'] != null)
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        borderRadius:
+                                            BorderRadius.circular(12), // 圆角
+                                        border: Border.all(
+                                            color: ColorUtils
+                                                .colorPrimary), // 边框颜色
+                                        color: ColorUtils.colorPrimary
+                                            .withOpacity(0.1), // 背景颜色
+                                      ),
+                                      child: Text(
+                                        '${item['itemStatusCode']}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color:
+                                              ColorUtils.colorPrimary, // 文本颜色
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
                             Checkbox(
-                              visualDensity: VisualDensity.compact, // 紧凑
+                              visualDensity: VisualDensity.compact,
                               materialTapTargetSize:
                                   MaterialTapTargetSize.shrinkWrap,
                               value: data.itemSelected[i],

@@ -1152,12 +1152,17 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
     if (orderStatus == ORDER_ASSIGNED) {
       FlutterRingtonePlayer().stop();
       await routePlanService.addTaskStatus(
-        taskId: orderData.id!, // 任务 ID
-        statusCode: "PickedUp", // 状态代码
+        taskId: orderData.id!,
+        statusCode: "PickedUp",
         name: "PickedUp",
         senderMessage: "Your order has been assigned",
         receiverMessage: "The order is now assigned to a delivery person",
         colorHex: "#00FF00",
+        itemIds: [
+          for (int i = 0; i < orderData.itemSelected.length; i++)
+            if (orderData.itemSelected[i])
+              orderData.taskItems?[i]['id']?.toString() ?? ''
+        ]..removeWhere((id) => id.isEmpty),
       );
 
       // 不进行跳转
@@ -1201,16 +1206,21 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
       int i = statusList.indexWhere((item) => item == ORDER_ARRIVED);
       pageController.jumpToPage(i + 1);
     } else if (orderStatus == ORDER_PICKED_UP) {
-      // 不进行跳转
-      // int i = statusList.indexWhere((item) => item == ORDER_PICKED_UP);
-      // pageController.jumpToPage(i + 1);
+      // 获取选中的 itemIds
+      List<String> selectedItemIds = [
+        for (int i = 0; i < orderData.itemSelected.length; i++)
+          if (orderData.itemSelected[i])
+            orderData.taskItems?[i]['id']?.toString() ?? ''
+      ]..removeWhere((id) => id.isEmpty);
+
       await routePlanService.addTaskStatus(
-        taskId: orderData.id!, // 任务 ID
-        statusCode: "Delivered", // 状态代码
+        taskId: orderData.id!,
+        statusCode: "Delivered",
         name: "Delivered",
         senderMessage: "Your order has been delivered",
         receiverMessage: "The order is now completed",
         colorHex: "#00FF00",
+        itemIds: selectedItemIds, // 传递 itemIds
       );
 
       getOrderListApiCall();

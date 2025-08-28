@@ -176,8 +176,16 @@ class RoutePlanService {
     String? senderMessage,
     String? receiverMessage,
     String? colorHex,
+    List<String>? itemIds, // 新增参数
   }) async {
     try {
+      // 构造 query string
+      String query = '';
+      if (itemIds != null && itemIds.isNotEmpty) {
+        query = itemIds.map((id) => 'itemIds=$id').join('&');
+        query = '?$query';
+      }
+
       final requestBody = {
         "statusCode": statusCode,
         "name": name,
@@ -187,11 +195,11 @@ class RoutePlanService {
       };
 
       final response = await HttpUtils.post<Map<String, dynamic>>(
-        '${SpUtil.baseUrl.val}/api/delivery/transport-tasks/$taskId/add-task-status',
+        '${SpUtil.baseUrl.val}/api/delivery/transport-tasks/$taskId/add-task-status$query',
         data: requestBody,
         options: Options(
           headers: {
-            "Content-Type": "application/json", // 确保设置了正确的 Content-Type
+            "Content-Type": "application/json",
           },
         ),
       );

@@ -544,46 +544,6 @@ class _DHomeFragmentState extends State<DHomeFragment>
                     parent: AlwaysScrollableScrollPhysics()),
                 children: [
                   9.height,
-                  // 添加扫描 area
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    margin: EdgeInsets.only(bottom: 12),
-                    decoration: boxDecorationWithRoundedCorners(
-                      borderRadius: BorderRadius.circular(12),
-                      backgroundColor: const Color.fromARGB(255, 203, 248, 248),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Scanning Area",
-                          style: boldTextStyle(size: 16, color: Colors.black),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            // 扫描逻辑
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => PreDeliveryScanScreen(
-                                  tasks: exampleTasks,
-                                ),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: ColorUtils.colorPrimary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(
-                            "Scan",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                   1.height,
                   latestOrderToCancelBid != null
                       ? bidCancelView(order: latestOrderToCancelBid ?? null)

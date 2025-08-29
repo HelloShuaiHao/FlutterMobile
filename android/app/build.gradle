@@ -52,7 +52,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "sg.glsapp.gls"
+        applicationId "u.nus.edu.astar.demo"
         minSdkVersion 31
         targetSdkVersion 34
         versionCode 50

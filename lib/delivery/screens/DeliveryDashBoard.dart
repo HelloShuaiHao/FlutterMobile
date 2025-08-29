@@ -94,6 +94,18 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
   TextEditingController pickDateController = TextEditingController();
   DateTime? pickDate;
 
+  Color getTaskItemStatusColor(String? status) {
+    final code = status?.toLowerCase() ?? '';
+    if (code == 'inprogress') {
+      return Colors.lightBlueAccent;
+    } else if (code == 'unpicked' || code == 'unpickedup') {
+      return Colors.red;
+    } else if (code == 'completed') {
+      return Colors.green;
+    }
+    return ColorUtils.colorPrimary;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -691,7 +703,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
               children: [
                 // order-id
                 Text(
-                  '${language.order} - ${data.orderTrackingId}',
+                  '${data.orderTrackingId}',
                   style:
                       boldTextStyle(size: 20, color: ColorUtils.colorPrimary),
                 ).expand(),
@@ -804,28 +816,27 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                               statusList[selectedStatusIndex] ==
                                   ORDER_PICKED_UP) {
                             int val = 0;
+                            appStore.setLoading(true); // 显示 loading
                             final epodResult = await Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const EPODScreen(),
                               ),
                             );
+                            appStore.setLoading(false); // 隐藏 loading
 
                             if (epodResult != null) {
                               print('拍照路径: ${epodResult['photoPath']}');
                               print('签名数据: ${epodResult['signature']}');
-                              // 这里可以上传图片和签名数据到服务器
-
                               await GallerySaver.saveImage(
                                   epodResult['photoPath']);
-                              // await GallerySaver.saveImage(
-                              //     epodResult['signature']);
-
+                              // 这里应该加 loading
+                              appStore.setLoading(true); // 新增：签名完成后显示 loading
                               await onTapData(
                                 orderData: data,
                                 orderStatus: statusList[selectedStatusIndex],
                               );
-
+                              appStore.setLoading(false); // 新增：操作完成后隐藏 loading
                               toast('配送确认成功');
                             } else {
                               toast('需要完成拍照和签名才能确认配送');
@@ -846,7 +857,6 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                     orderStatus:
                                         statusList[selectedStatusIndex]);
                                 appStore.setLoading(false);
-                                // finish(context);
                               },
                             );
                           }
@@ -1050,20 +1060,23 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                       padding: EdgeInsets.symmetric(
                                           horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        borderRadius:
-                                            BorderRadius.circular(12), // 圆角
+                                        borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
-                                            color: ColorUtils
-                                                .colorPrimary), // 边框颜色
-                                        color: ColorUtils.colorPrimary
-                                            .withOpacity(0.1), // 背景颜色
+                                            color: getTaskItemStatusColor(
+                                                item['itemStatusCode']
+                                                    ?.toString())),
+                                        color: getTaskItemStatusColor(
+                                                item['itemStatusCode']
+                                                    ?.toString())
+                                            .withOpacity(0.1),
                                       ),
                                       child: Text(
                                         '${item['itemStatusCode']}',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color:
-                                              ColorUtils.colorPrimary, // 文本颜色
+                                          color: getTaskItemStatusColor(
+                                              item['itemStatusCode']
+                                                  ?.toString()),
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),

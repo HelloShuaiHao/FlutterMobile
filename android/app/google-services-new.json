@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "117043648575",
-    "project_id": "flutter-demo-cf6ff",
-    "storage_bucket": "flutter-demo-cf6ff.firebasestorage.app"
+    "project_number": "689021176015",
+    "project_id": "fpg-sc-tms-uat",
+    "storage_bucket": "fpg-sc-tms-uat.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:117043648575:android:3d09a165ecf08ddc29c08a",
+        "mobilesdk_app_id": "1:689021176015:android:9ef90079ae22c578cf8fba",
         "android_client_info": {
-          "package_name": "u.nus.edu.astar.demo"
+          "package_name": "sg.glsapp.gls"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBQbrfWAmijHRK3wTdUmJ1VJtWWfNXgpiw"
+          "current_key": "AIzaSyDZ8_HT1NWbcnXbtmI8f58DoNDmguGis5g"
         }
       ],
       "services": {

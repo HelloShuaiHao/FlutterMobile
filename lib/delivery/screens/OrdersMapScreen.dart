@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:mighty_delivery/main/network/http_utils.dart';
+import 'package:mighty_delivery/main/services/LocationTrackingService.dart';
 import 'package:mighty_delivery/main/utils/storage.dart';
 import '../../extensions/extension_util/context_extensions.dart';
 import '../../extensions/extension_util/int_extensions.dart';
@@ -48,6 +50,9 @@ class _OrdersMapScreenState extends State<OrdersMapScreen> {
   Offset? infoWindowOffset;
   InfoWindow? selectedInfoWindow;
   List<InfoWindow> infoWindowItems = [];
+
+  StreamSubscription? _locSub;
+
   // LatLng? _center;
   void onMapCreated(GoogleMapController controller) async {
     setState(() {
@@ -65,18 +70,40 @@ class _OrdersMapScreenState extends State<OrdersMapScreen> {
 
   @override
   void dispose() {
-    // 取消监听
-    // 现在有一个问题是：我每次点击这个定位的按钮 进入OrderMapScreen以后，定位服务就会启动，定位服务我用的是background_geolocation,然后就会不停的弹出提醒，稍微动一下就会触发事件，
-    // 你觉得我该怎么修改
     bg.BackgroundGeolocation.removeListeners();
     super.dispose();
+  }
+
+  void _updateCurrentMarker(bg.Location location) {
+    if (!mounted) return;
+    final LatLng current =
+        LatLng(location.coords.latitude, location.coords.longitude);
+    setState(() {
+      markers.removeWhere((m) => m.markerId.value == "currentLocation");
+      markers.add(Marker(
+        markerId: const MarkerId("currentLocation"),
+        position: current,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        onTap: () => _onMarkerTapped(position: current, id: 1),
+      ));
+    });
   }
 
   @override
   void initState() {
     super.initState();
     setMarkerIcons();
-    // getLatLngOfOrdersApi();
+
+    // 订阅统一服务的位置信息
+    _locSub = LocationTrackingService.instance.locationStream.listen((loc) {
+      _updateCurrentMarker(loc);
+    });
+
+    // 若需要初次显示最近一次缓存
+    final last = LocationTrackingService.instance.lastLocation;
+    if (last != null) {
+      _updateCurrentMarker(last);
+    }
 
     // test bglocator
     _isMoving = false;
@@ -84,44 +111,6 @@ class _OrdersMapScreenState extends State<OrdersMapScreen> {
     _content = '';
     _motionActivity = 'UNKNOWN';
     _odometer = '0';
-
-    // 1.  Listen to events (See docs for all 12 available events).
-    // bg.BackgroundGeolocation.onLocation(_onLocation);
-    bg.BackgroundGeolocation.onLocation(
-      (bg.Location location) {
-        print("[onLocation] success: $location");
-        _onLocation(location);
-      },
-      (bg.LocationError error) {
-        print("[onLocation] ERROR: $error");
-      },
-    );
-    bg.BackgroundGeolocation.onMotionChange(_onMotionChange);
-    bg.BackgroundGeolocation.onActivityChange(_onActivityChange);
-
-    // 2.  Configure the plugin
-    bg.BackgroundGeolocation.ready(bg.Config(
-      desiredAccuracy: bg.Config.DESIRED_ACCURACY_HIGH,
-      distanceFilter: 100,
-      stopOnTerminate: false,
-      startOnBoot: true,
-      debug: true,
-      logLevel: bg.Config.LOG_LEVEL_VERBOSE,
-      reset: true,
-    )).then((bg.State state) {
-      setState(() {
-        _enabled = state.enabled;
-        _isMoving = state.isMoving == true;
-      });
-
-      // 启动定位服务
-      bg.BackgroundGeolocation.start().then((bg.State state) {
-        print('[start] 定位已启动: $state');
-      });
-
-      // 启动_onClickChangePace
-      _onClickChangePace();
-    });
   }
 
   setMarkerIcons() async {
@@ -163,62 +152,6 @@ class _OrdersMapScreenState extends State<OrdersMapScreen> {
           address: "Test Address",
         ),
       );
-
-      // value.data!.forEach((element) {
-      //   if (element.status == ORDER_ASSIGNED) {
-      //     InfoWindow item = new InfoWindow(
-      //         id: element.id.toString(),
-      //         startTime: element.pickupPoint!.startTime,
-      //         endTime: element.pickupPoint!.endTime,
-      //         status: element.status,
-      //         address: element.pickupPoint!.address,
-      //         title: language.pendingPickup);
-
-      //     markers.add(
-      //       Marker(
-      //         markerId: MarkerId(element.id.toString()),
-      //         position: LatLng(element.pickupPoint!.latitude.toDouble(), element.pickupPoint!.longitude.toDouble()),
-      //         icon: assignedMarkerIcon!,
-      //         onTap: () => _onMarkerTapped(
-      //             position: LatLng(element.pickupPoint!.latitude.toDouble(), element.pickupPoint!.longitude.toDouble()),
-      //             id: element.id!),
-      //       ),
-      //     );
-      //     infoWindowItems.add(item);
-      //     // assignedOrders
-      //     //     .add(LatLng(element.pickupPoint!.latitude!.toDouble(), element.pickupPoint!.longitude!.toDouble()));
-      //   } else if (element.status == ORDER_ACCEPTED ||
-      //       element.status == ORDER_PICKED_UP ||
-      //       element.status == ORDER_ARRIVED ||
-      //       element.status == ORDER_DEPARTED) {
-      //     InfoWindow item = new InfoWindow(
-      //         id: element.id.toString(),
-      //         startTime: element.deliveryPoint!.startTime,
-      //         endTime: element.deliveryPoint!.endTime,
-      //         status: element.status,
-      //         address: element.deliveryPoint!.address,
-      //         title: language.pendingDelivery);
-
-      //     markers.add(
-      //       Marker(
-      //         markerId: MarkerId(element.id.toString()),
-      //         position: LatLng(element.deliveryPoint!.latitude.toDouble(), element.deliveryPoint!.longitude.toDouble()),
-      //         onTap: () => _onMarkerTapped(
-      //           position: LatLng(
-      //             element.deliveryPoint!.latitude.toDouble(),
-      //             element.deliveryPoint!.longitude.toDouble(),
-      //           ),
-      //           id: element.id!,
-      //         ),
-      //         icon: acceptedMarkerIcon!,
-      //       ),
-      //     );
-      //     infoWindowItems.add(item);
-      //     // acceptedOrders
-      //     //     .add(LatLng(element.deliveryPoint!.latitude!.toDouble(), element.deliveryPoint!.longitude!.toDouble()));
-      //   }
-      // });
-
       appStore.setLoading(false);
       setState(() {});
     }).catchError((error) {
@@ -255,102 +188,6 @@ class _OrdersMapScreenState extends State<OrdersMapScreen> {
     });
   }
 
-  // test geolocator
-  void _onLocation(bg.Location location) async {
-    print('-----------------[location] - $location');
-
-    if (!mounted) return;
-
-    final String odometerKM = (location.odometer / 1000.0).toStringAsFixed(1);
-    LatLng currentLocation =
-        LatLng(location.coords.latitude, location.coords.longitude);
-
-    setState(() {
-      _content = encoder.convert(location.toMap());
-      _odometer = odometerKM;
-
-      // 移除之前的定位marker
-      markers
-          .removeWhere((marker) => marker.markerId.value == "currentLocation");
-      markers.add(Marker(
-        markerId: MarkerId("currentLocation"),
-        position: currentLocation,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        onTap: () {
-          // 测试点击 marker 显示 infoWindow
-          _onMarkerTapped(
-            position: currentLocation,
-            id: 1,
-          );
-        },
-      ));
-    });
-
-    // TODO
-    var token = SpUtil.token.val;
-    // SpUtil.token.val = "";
-
-    // send the location to the server
-    var r = await HttpUtils.post("/api/mobile/locations/create", data: {
-      "latitude": location.coords.latitude,
-      "longitude": location.coords.longitude,
-      "timeStamp": location.timestamp,
-      "identityUserId": token,
-      "address": "location."
-    });
-    if (r.code == 0) {
-      print("success");
-    } else {
-      print("error");
-    }
-  }
-
-  void _onMotionChange(bg.Location location) {
-    print('[motionchange] - $location');
-  }
-
-  Future<void> _onActivityChange(bg.ActivityChangeEvent event) async {
-    print('[activitychange] - $event');
-    // 获取当前位置信息
-
-    // try {
-    //   bg.Location location = await bg.BackgroundGeolocation.getCurrentPosition(
-    //     persist: false,
-    //     // desiredAccuracy: 0,
-    //     desiredAccuracy: bg.Config.DESIRED_ACCURACY_LOW, // 降低精度要求
-    //     timeout: 60000,
-    //     samples: 3,
-    //   );
-    //   print('[activitychange-current-location] - lat: ${location.coords.latitude}, lon: ${location.coords.longitude}');
-    // } catch (error) {
-    //   print('[activitychange] 获取 location 出错: $error');
-    // }
-
-    // setState(() {
-    //   _motionActivity = event.activity;
-    // });
-    if (!mounted) return; // 检查是否仍然挂载
-    setState(() {
-      _motionActivity = event.activity;
-    });
-  }
-
-  // Manually toggle the tracking state:  moving vs stationary
-  void _onClickChangePace() {
-    if (!mounted) return;
-
-    setState(() {
-      _isMoving = !_isMoving;
-    });
-    print('[onClickChangePace] -> $_isMoving');
-
-    bg.BackgroundGeolocation.changePace(_isMoving).then((bool isMoving) {
-      print('[changePace] success $isMoving');
-    }).catchError((e) {
-      print('[changePace] ERROR: ${e.code}');
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -362,24 +199,7 @@ class _OrdersMapScreenState extends State<OrdersMapScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               markers.isNotEmpty
-                  ?
-                  // GoogleMap(
-                  //     markers: markers.map((e) => e).toSet(),
-                  //     polylines: _polylines,
-                  //     mapType: MapType.normal,
-                  //     cameraTargetBounds: CameraTargetBounds.unbounded,
-                  //     initialCameraPosition: CameraPosition(
-                  //       target: markers.first.position,
-                  //       zoom: 12.0,
-                  //     ),
-                  //     onMapCreated: onMapCreated,
-                  //     onTap: _onMapTapped,
-                  //     tiltGesturesEnabled: true,
-                  //     scrollGesturesEnabled: true,
-                  //     zoomGesturesEnabled: true,
-                  //     // trafficEnabled: true,
-                  //   ).expand()
-                  GoogleMap(
+                  ? GoogleMap(
                       markers: markers.toSet(),
                       polylines: _polylines,
                       mapType: MapType.normal,

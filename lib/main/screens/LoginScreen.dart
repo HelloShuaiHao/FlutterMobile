@@ -5,8 +5,10 @@ import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:mighty_delivery/delivery/screens/AddDeliverymanVehicleScreen.dart';
 import 'package:mighty_delivery/delivery/widgets/VehicleSelectionWidget.dart';
 import 'package:mighty_delivery/main/models/DeliverymanVehicleListModel.dart';
+import 'package:mighty_delivery/main/services/LocationTrackingService.dart';
 import 'package:mighty_delivery/main/services/VehicleService.dart';
 import 'package:mighty_delivery/main/store/AppStore.dart';
+import 'package:mighty_delivery/main/utils/storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../extensions/extension_util/context_extensions.dart';
 import '../../extensions/extension_util/int_extensions.dart';
@@ -122,14 +124,19 @@ class LoginScreenState extends State<LoginScreen> {
             return;
           }
 
+          // 取得用户标识
+          final identityUserId = SpUtil.token.val;
+          // 启动后台定位（只需调用一次）
+          LocationTrackingService.instance.startTracking(
+            identityUserId: identityUserId,
+          );
+
           // 登录成功才跳转
           DHomeFragment().launch(context, isNewTask: true);
         } catch (e) {
           appStore.setLoading(false);
           toast("登录失败: ${e.toString()}");
         }
-      } else {
-        toast(language.acceptTermService);
       }
     }
   }

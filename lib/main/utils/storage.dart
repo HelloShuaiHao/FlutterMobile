@@ -7,15 +7,17 @@ class SpUtil {
   // static const String baseUrlVal = "https://172.20.10.4:7500";
   // static const String baseUrlVal = "https://ai.bygpu.com:55316";
   // static const String baseUrlVal = "https://localhost:7500";
-  static const String baseUrlVal =
-      "https://dev-apex-01.southeastasia.cloudapp.azure.com:7500";
+  // static const String baseUrlVal =
+  //     "https://dev-apex-01.southeastasia.cloudapp.azure.com:7500";
+  static const String baseUrlVal = "https://uat.simtech-sul.com:7500";
   static var baseUrl = baseUrlVal.val("baseUrl");
 
   // static const String baseAuthUrlVal = "https://172.20.10.4:7500";
   // static const String baseAuthUrlVal = "https://localhost:7500";
   // static const String baseAuthUrlVal = "https://ai.bygpu.com:55316";
-  static const String baseAuthUrlVal =
-      "https://dev-apex-01.southeastasia.cloudapp.azure.com:7500";
+  // static const String baseAuthUrlVal =
+  //     "https://dev-apex-01.southeastasia.cloudapp.azure.com:7500";
+  static const String baseAuthUrlVal = "https://uat.simtech-sul.com:7600";
   static var baseAuthUrl = baseAuthUrlVal.val("baseAuthUrl");
 
   static var token = "".val("token");

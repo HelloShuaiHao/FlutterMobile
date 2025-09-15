@@ -246,7 +246,7 @@ class AuthServices {
       final result = await _myAuth.login(
         email,
         password,
-        '${SpUtil.baseAuthUrl.val}/api/auth/connect/token',
+        '${SpUtil.baseAuthUrl.val}/connect/token',
       );
       // 这里直接返回接口返回的内容
       return result;

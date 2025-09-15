@@ -1,3 +1,8 @@
+/*
+改进点 
+1. 每次点击导航按钮跳转到谷歌的时候 起点应该用当前位置的经纬度
+*/
+
 import 'package:gallery_saver/gallery_saver.dart';
 import 'dart:async';
 
@@ -13,9 +18,11 @@ import 'package:mighty_delivery/delivery/screens/CameraScreen.dart';
 import 'package:mighty_delivery/delivery/screens/EPODScreen.dart';
 
 import 'package:mighty_delivery/main/models/GroupedOrderData.dart';
+import 'package:mighty_delivery/main/services/LocationTrackingService.dart';
 
 import 'package:mighty_delivery/main/services/RoutePlanService.dart';
 import 'package:mighty_delivery/main/utils/storage.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../delivery/screens/OrdersMapScreen.dart';
 import '../../extensions/app_text_field.dart';
@@ -723,14 +730,14 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                     size: 28,
                   ),
                 )
-                    .onTap(() {
-                      openMap(
-                          double.parse(data.pickupPoint!.latitude.validate()),
-                          double.parse(data.pickupPoint!.longitude.validate()),
-                          double.parse(data.deliveryPoint!.latitude.validate()),
-                          double.parse(
-                              data.deliveryPoint!.longitude.validate()));
+                    .onTap(() async {
+                      // 使用当前真实位置作为起点
+                      await _launchNavigation(data: data);
                     })
+                    .paddingSymmetric(horizontal: 5)
+                    .visible(data.status != ORDER_DELIVERED &&
+                        data.status != ORDER_CANCELLED &&
+                        data.status != ORDER_SHIPPED)
                     .paddingSymmetric(horizontal: 5)
                     .visible(data.status != ORDER_DELIVERED &&
                         data.status != ORDER_CANCELLED &&
@@ -1271,5 +1278,72 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
       return language.confirmDelivery;
     }
     return '';
+  }
+
+  Future<({double lat, double lng})?> _getCurrentLatLng() async {
+    // 优先后台定位服务
+    final last = LocationTrackingService.instance.lastLocation;
+    if (last != null) {
+      return (lat: last.coords.latitude, lng: last.coords.longitude);
+    }
+    try {
+      // 兜底直接用 Geolocator (已 import geolocator.dart)
+      final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.low);
+      return (lat: pos.latitude, lng: pos.longitude);
+    } catch (e) {
+      print('Current location fetch error: $e');
+      return null;
+    }
+  }
+
+  String _buildNavigationUrl({
+    required double originLat,
+    required double originLng,
+    required double destLat,
+    required double destLng,
+  }) {
+    return 'https://www.google.com/maps/dir/?api=1'
+        '&origin=$originLat,$originLng'
+        '&destination=$destLat,$destLng'
+        '&travelmode=driving';
+  }
+
+  Future<void> _launchNavigation({
+    required OrderData data,
+  }) async {
+    final current = await _getCurrentLatLng();
+    if (current == null) {
+      toast('当前位置不可用，请稍后再试');
+      return;
+    }
+
+    // 判定目标点
+    double destLat;
+    double destLng;
+
+    if (data.status == ORDER_ASSIGNED) {
+      destLat = double.parse(data.pickupPoint!.latitude.validate());
+      destLng = double.parse(data.pickupPoint!.longitude.validate());
+    } else {
+      // PickedUp / Departed 等去送货地址
+      destLat = double.parse(data.deliveryPoint!.latitude.validate());
+      destLng = double.parse(data.deliveryPoint!.longitude.validate());
+    }
+
+    final url = _buildNavigationUrl(
+      originLat: current.lat,
+      originLng: current.lng,
+      destLat: destLat,
+      destLng: destLng,
+    );
+
+    print('NAV URL: $url');
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      toast('无法打开导航应用');
+    }
   }
 }

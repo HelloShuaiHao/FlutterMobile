@@ -104,7 +104,7 @@ class LocationTrackingService {
       desiredAccuracy: bg.Config.DESIRED_ACCURACY_LOW,
       distanceFilter: 1000,
       disableElasticity: true,
-      heartbeatInterval: 60, // 5分钟；调试想快点可临时改 10
+      heartbeatInterval: 180, // 5分钟；调试想快点可临时改 10
       stopOnTerminate: false,
       startOnBoot: true,
       foregroundService: true,

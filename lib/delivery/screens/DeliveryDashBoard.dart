@@ -1,20 +1,22 @@
 /*
 改进点 
 1. 每次点击导航按钮跳转到谷歌的时候 起点应该用当前位置的经纬度
+
+修改：
+1. 每次取消 item 选框的时候 应该能够弹出一个对话框 让用户通过 dropdown list 或者 text field 选择取消的原因
+2. 然后再点击每个 order card 的确认 button 之后 能够把 item id 和 取消的原因 一并传给后台
+
 */
 
 import 'package:gallery_saver/gallery_saver.dart';
 import 'dart:async';
 
-import 'package:date_time_picker/date_time_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
-import 'package:mighty_delivery/delivery/screens/CameraScreen.dart';
 import 'package:mighty_delivery/delivery/screens/EPODScreen.dart';
 
 import 'package:mighty_delivery/main/models/GroupedOrderData.dart';
@@ -25,22 +27,16 @@ import 'package:mighty_delivery/main/utils/storage.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../delivery/screens/OrdersMapScreen.dart';
-import '../../extensions/app_text_field.dart';
 import '../../extensions/extension_util/context_extensions.dart';
 import '../../extensions/extension_util/int_extensions.dart';
 import '../../extensions/extension_util/string_extensions.dart';
 import '../../extensions/extension_util/widget_extensions.dart';
-import '../../extensions/widgets.dart';
-import '../../main/utils/Colors.dart';
 import '../../main/utils/Widgets.dart';
 import '../../main/utils/dynamic_theme.dart';
 
 import '../../delivery/fragment/DProfileFragment.dart';
 import '../../extensions/LiveStream.dart';
-import '../../extensions/animatedList/animated_configurations.dart';
-import '../../extensions/animatedList/animated_list_view.dart';
 import '../../extensions/app_button.dart';
-import '../../extensions/colors.dart';
 import '../../extensions/common.dart';
 import '../../extensions/confirmation_dialog.dart';
 import '../../extensions/decorations.dart';
@@ -50,20 +46,15 @@ import '../../extensions/system_utils.dart';
 import '../../extensions/text_styles.dart';
 import '../../main.dart';
 import '../../main/components/CommonScaffoldComponent.dart';
-import '../../main/models/CityListModel.dart';
 import '../../main/models/OrderListModel.dart';
 import '../../main/network/RestApis.dart';
 import '../../main/screens/NotificationScreen.dart';
-import '../../main/screens/UserCitySelectScreen.dart';
 import '../../main/utils/Common.dart';
 import '../../main/utils/Constants.dart';
 import '../../main/utils/Images.dart';
-import '../../user/screens/OrderDetailScreen.dart';
 import 'ReceivedScreenOrderScreen.dart';
 
 // background geolocation
-import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
-    as bg;
 
 class DeliveryDashBoard extends StatefulWidget {
   final int selectedIndex;
@@ -92,6 +83,116 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
   List<OrderData> orderData = [];
   List<Map<String, dynamic>> rawOrderItems = [];
   List<GroupedOrderData> groupedOrderDataList = []; // 分组数据
+
+  // ===== Cancellation reason support =====
+  // Stores per-item cancellation reasons when user unchecks an item
+  final Map<String, String> _itemCancelReasons = {};
+  // Dropdown preset options
+  final List<String> _cancelReasonOptions = const [
+    'Customer cancelled',
+    'Damaged item',
+    'Out of stock',
+    'Wrong item prepared',
+    'Address issue',
+    'Other',
+  ];
+
+  // Build item remarks list (only unchecked items with a reason)
+  List<Map<String, dynamic>> _buildItemRemarks(OrderData order) {
+    final remarks = <Map<String, dynamic>>[];
+    final items = order.taskItems ?? [];
+    for (int i = 0; i < items.length; i++) {
+      final item = items[i];
+      final itemId = item['id']?.toString();
+      if (itemId == null || itemId.isEmpty) continue;
+      final isSelected = (i < order.itemSelected.length)
+          ? order.itemSelected[i]
+          : true; // default selected
+      if (!isSelected) {
+        final reason = _itemCancelReasons[itemId];
+        if (reason != null && reason.trim().isNotEmpty) {
+          remarks.add({'itemId': itemId, 'remark': reason.trim()});
+        }
+      }
+    }
+    return remarks;
+  }
+
+  Future<String?> _promptCancelReason(String itemName) async {
+    String current = _cancelReasonOptions.first;
+    final TextEditingController customCtl = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (ctx, setLocal) {
+            return AlertDialog(
+              title: const Text('Cancellation Reason'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Item: $itemName',
+                        style:
+                            const TextStyle(fontSize: 13, color: Colors.grey)),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: current,
+                    decoration:
+                        const InputDecoration(labelText: 'Select reason'),
+                    items: _cancelReasonOptions
+                        .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                        .toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setLocal(() => current = v);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: customCtl,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                        labelText: 'Custom reason (optional)'),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, null),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    String finalReason;
+                    if (current == 'Other') {
+                      finalReason = customCtl.text.trim();
+                    } else {
+                      finalReason = current +
+                          (customCtl.text.trim().isNotEmpty
+                              ? ' - ${customCtl.text.trim()}'
+                              : '');
+                    }
+                    if (finalReason.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please enter a reason')),
+                      );
+                      return;
+                    }
+                    Navigator.pop(ctx, finalReason);
+                  },
+                  child: const Text('Confirm'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 
   // List<NewOrderData> orderData = []; // change type to var
   GlobalKey<FormState> rescheduleFormKey = GlobalKey<FormState>();
@@ -822,7 +923,6 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                   ORDER_DEPARTED ||
                               statusList[selectedStatusIndex] ==
                                   ORDER_PICKED_UP) {
-                            int val = 0;
                             appStore.setLoading(true); // 显示 loading
                             final epodResult = await Navigator.push(
                               context,
@@ -1035,6 +1135,8 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                     // item行
                     ...List.generate(data.taskItems?.length ?? 0, (i) {
                       final item = data.taskItems![i];
+                      final itemId = item['id']?.toString() ?? '';
+                      final hasReason = _itemCancelReasons.containsKey(itemId);
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
                         child: Row(
@@ -1088,6 +1190,27 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                         ),
                                       ),
                                     ),
+                                  if (!data.itemSelected[i] && hasReason)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Icon(Icons.info_outline,
+                                              size: 14, color: Colors.orange),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              _itemCancelReasons[itemId]!,
+                                              style: const TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.orange),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
@@ -1096,10 +1219,31 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                               materialTapTargetSize:
                                   MaterialTapTargetSize.shrinkWrap,
                               value: data.itemSelected[i],
-                              onChanged: (val) {
-                                setState(() {
-                                  data.itemSelected[i] = val ?? false;
-                                });
+                              onChanged: (val) async {
+                                if (val == null) return;
+                                if (val == false) {
+                                  // prompt reason
+                                  final reason = await _promptCancelReason(
+                                      item['name']?.toString() ?? 'Item');
+                                  if (reason == null) {
+                                    // user cancelled -> keep selected
+                                    setState(() {});
+                                    return;
+                                  }
+                                  setState(() {
+                                    data.itemSelected[i] = false;
+                                    if (itemId.isNotEmpty) {
+                                      _itemCancelReasons[itemId] = reason;
+                                    }
+                                  });
+                                } else {
+                                  setState(() {
+                                    data.itemSelected[i] = true;
+                                    if (itemId.isNotEmpty) {
+                                      _itemCancelReasons.remove(itemId);
+                                    }
+                                  });
+                                }
                               },
                             ),
                           ],
@@ -1171,6 +1315,14 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
     // var enumStatusCode = convertStatusToEnum(orderStatus);
     if (orderStatus == ORDER_ASSIGNED) {
       FlutterRingtonePlayer().stop();
+      final selectedIds = [
+        for (int i = 0; i < orderData.itemSelected.length; i++)
+          if (orderData.itemSelected[i])
+            orderData.taskItems?[i]['id']?.toString() ?? ''
+      ]..removeWhere((id) => id.isEmpty);
+
+      final itemRemarks = _buildItemRemarks(orderData);
+
       await routePlanService.addTaskStatus(
         taskId: orderData.id!,
         statusCode: "PickedUp",
@@ -1178,11 +1330,8 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
         senderMessage: "Your order has been assigned",
         receiverMessage: "The order is now assigned to a delivery person",
         colorHex: "#00FF00",
-        itemIds: [
-          for (int i = 0; i < orderData.itemSelected.length; i++)
-            if (orderData.itemSelected[i])
-              orderData.taskItems?[i]['id']?.toString() ?? ''
-        ]..removeWhere((id) => id.isEmpty),
+        itemIds: selectedIds,
+        itemRemarks: itemRemarks,
       );
 
       // 不进行跳转
@@ -1227,11 +1376,12 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
       pageController.jumpToPage(i + 1);
     } else if (orderStatus == ORDER_PICKED_UP) {
       // 获取选中的 itemIds
-      List<String> selectedItemIds = [
+      final selectedItemIds = [
         for (int i = 0; i < orderData.itemSelected.length; i++)
           if (orderData.itemSelected[i])
             orderData.taskItems?[i]['id']?.toString() ?? ''
       ]..removeWhere((id) => id.isEmpty);
+      final itemRemarks = _buildItemRemarks(orderData);
 
       await routePlanService.addTaskStatus(
         taskId: orderData.id!,
@@ -1240,7 +1390,8 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
         senderMessage: "Your order has been delivered",
         receiverMessage: "The order is now completed",
         colorHex: "#00FF00",
-        itemIds: selectedItemIds, // 传递 itemIds
+        itemIds: selectedItemIds,
+        itemRemarks: itemRemarks,
       );
 
       getOrderListApiCall();

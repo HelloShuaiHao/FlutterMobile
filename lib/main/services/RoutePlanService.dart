@@ -168,7 +168,6 @@ class RoutePlanService {
     };
   }
 
-  // 新增状态的 API 方法
   Future<void> addTaskStatus({
     required String taskId,
     required String statusCode,
@@ -176,7 +175,8 @@ class RoutePlanService {
     String? senderMessage,
     String? receiverMessage,
     String? colorHex,
-    List<String>? itemIds, // 新增参数
+    List<String>? itemIds,
+    List<Map<String, dynamic>>? itemRemarks, // NEW
   }) async {
     try {
       // 构造 query string
@@ -192,6 +192,13 @@ class RoutePlanService {
         if (senderMessage != null) "senderMessage": senderMessage,
         if (receiverMessage != null) "receiverMessage": receiverMessage,
         if (colorHex != null) "colorHex": colorHex,
+        if (itemRemarks != null && itemRemarks.isNotEmpty)
+          "itemRemarks": itemRemarks.map((e) {
+            return {
+              "itemId": e["itemId"],
+              "remark": e["remark"],
+            };
+          }).toList(),
       };
 
       final response = await HttpUtils.post<Map<String, dynamic>>(

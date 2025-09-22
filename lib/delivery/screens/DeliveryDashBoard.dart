@@ -1,12 +1,4 @@
-/*
-改进点 
-1. 每次点击导航按钮跳转到谷歌的时候 起点应该用当前位置的经纬度
 
-修改：
-1. 每次取消 item 选框的时候 应该能够弹出一个对话框 让用户通过 dropdown list 或者 text field 选择取消的原因
-2. 然后再点击每个 order card 的确认 button 之后 能够把 item id 和 取消的原因 一并传给后台
-
-*/
 
 import 'package:gallery_saver/gallery_saver.dart';
 import 'dart:async';

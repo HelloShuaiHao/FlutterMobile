@@ -15,30 +15,21 @@ import 'package:mighty_delivery/main/utils/storage.dart';
 import '../../bidding/delivery/models/BidOrderModel.dart';
 import '../../bidding/delivery/screens/DeliveryBidListScreen.dart';
 import '../../bidding/utils/Constants.dart';
-import '../../delivery/screens/EarningHistoryScreen.dart';
-import '../../delivery/screens/FilterCountScreen.dart';
-import '../../delivery/screens/PreDeliveryScanScreen.dart';
 
 import '../../extensions/extension_util/int_extensions.dart';
-import '../../extensions/extension_util/num_extensions.dart';
 import '../../extensions/extension_util/string_extensions.dart';
 import '../../extensions/extension_util/widget_extensions.dart';
 import '../../main/models/DashboardCountModel.dart';
-import '../../user/screens/WalletScreen.dart';
 
 import '../../extensions/LiveStream.dart';
 import '../../extensions/colors.dart';
 import '../../extensions/decorations.dart';
 import '../../extensions/shared_pref.dart';
 import '../../extensions/text_styles.dart';
-import '../../extensions/widgets.dart';
 import '../../main.dart';
 import '../../main/components/CommonScaffoldComponent.dart';
-import '../../main/models/CityListModel.dart';
 import '../../main/models/LoginResponse.dart';
 import '../../main/network/RestApis.dart';
-import '../../main/screens/BankDetailScreen.dart';
-import '../../main/screens/UserCitySelectScreen.dart';
 import '../../main/utils/Common.dart';
 import '../../main/utils/Constants.dart';
 import '../../main/utils/Widgets.dart';
@@ -49,10 +40,9 @@ import '../../extensions/common.dart';
 import '../../main/screens/NotificationScreen.dart';
 import '../../main/utils/dynamic_theme.dart';
 import '../screens/DeliveryDashBoard.dart';
-import '../screens/WithDrawScreen.dart';
 
 import 'package:flutter_datetime_picker_plus/flutter_datetime_picker_plus.dart';
-import 'package:intl/intl.dart';
+// removed duplicate import of intl/DateFormat (already imported earlier)
 
 // 日期格式化工具
 final DateFormat dateFormat = DateFormat('yyyy-MM-dd');
@@ -168,9 +158,11 @@ class _DHomeFragmentState extends State<DHomeFragment>
       case 1:
         return (statusCountMap['Assigned'] ?? 0).toString();
       case 2:
-        return (statusCountMap['Delivered'] ?? 0).toString();
+        // 第三个卡片是 PICKED_UP_ORDER，所以这里应显示 Picked Up 数量
+        return (statusCountMap['Picked Up'] ?? 0).toString();
       case 3:
-        return (statusCountMap['Picked Up'] ?? 0).toString(); // Picked Up 状态
+        // 第四个卡片是 COMPLETED_ORDER (Delivered)，这里显示 Delivered 数量
+        return (statusCountMap['Delivered'] ?? 0).toString();
       case 4:
         return (statusCountMap['Cancelled'] ?? 0).toString();
       default:

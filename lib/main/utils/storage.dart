@@ -5,6 +5,7 @@ import 'package:get_storage/get_storage.dart';
 
 class SpUtil {
   // static const String baseUrlVal = "https://172.20.10.4:7500";
+  // static const String baseUrlVal = "https://10.5.58.167:7500";
   // static const String baseUrlVal = "https://ai.bygpu.com:55316";
   // static const String baseUrlVal = "https://localhost:7500";
   // static const String baseUrlVal =
@@ -13,10 +14,11 @@ class SpUtil {
   static var baseUrl = baseUrlVal.val("baseUrl");
 
   // static const String baseAuthUrlVal = "https://172.20.10.4:7500";
+  // static const String baseAuthUrlVal = "https://10.5.58.167:7600";
   // static const String baseAuthUrlVal = "https://localhost:7500";
   // static const String baseAuthUrlVal = "https://ai.bygpu.com:55316";
   // static const String baseAuthUrlVal =
-  //     "https://dev-apex-01.southeastasia.cloudapp.azure.com:7500";
+  //     "https://dev-apex-01.southeastasia.cloudapp.azure.com:7600";
   static const String baseAuthUrlVal = "https://uat.simtech-sul.com:7600";
   static var baseAuthUrl = baseAuthUrlVal.val("baseAuthUrl");
 

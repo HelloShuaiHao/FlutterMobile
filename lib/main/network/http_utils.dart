@@ -87,7 +87,7 @@ class HttpUtils {
             try {
               // 用 refresh_token 换新 token
               var refreshResponse = await dio.post(
-                '${SpUtil.baseAuthUrl.val}/api/auth/connect/token',
+                '${SpUtil.baseAuthUrl.val}/connect/token',
                 data: {
                   'client_id': 'SimTech.Apex_App',
                   'grant_type': 'refresh_token',

@@ -24,6 +24,14 @@
         android:enableOnBackInvokedCallback="false"
         android:usesCleartextTraffic="false">
 
+        <service
+            android:name="com.transistorsoft.locationmanager.service.TrackingService"
+            android:foregroundServiceType="location"
+            android:stopWithTask="false"/>
+        <service
+            android:name="com.transistorsoft.locationmanager.service.HeartbeatService"
+            android:stopWithTask="false"/>
+            
         <!-- 许可证 -->
         <meta-data
             android:name="com.transistorsoft.locationmanager.license"

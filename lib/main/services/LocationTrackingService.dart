@@ -123,12 +123,11 @@ class LocationTrackingService {
       stopOnTerminate: false,
       startOnBoot: true,
       foregroundService: true,
-      enableHeadless: true, // NEW
+      enableHeadless: true,
       allowIdenticalLocations: true,
       debug: true,
       logLevel: bg.Config.LOG_LEVEL_INFO,
       notification: bg.Notification(
-        // 持续前台通知，避免被系统判为空进程
         title: 'Location Service Running',
         text: 'Tracking delivery position',
         channelName: 'DeliveryTracking',
@@ -136,7 +135,16 @@ class LocationTrackingService {
     ));
 
     print('[BG] ready() -> enabled=${state.enabled}');
-    if (state.enabled) _started = true;
+    if (state.enabled) {
+      // 之前已经 start 过（原生 service 可能仍在）
+      _started = true;
+      _cachedIdentityUserId ??= SpUtil.token.val; // 尝试恢复 identity
+      _startPeriodicUploader(); // 之前缺失
+      await _tryUpload(
+        force: true,
+        identityUserId: _cachedIdentityUserId ?? '',
+      );
+    }
     _configured = true;
     print('[BG] configure done');
   }

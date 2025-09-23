@@ -1,9 +1,12 @@
+/**
+ * 我现在希望用 adb 安装到手机里进行测试 怎么做
+ */
+
 import 'dart:async';
 import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
     as bg;
 import 'package:mighty_delivery/main/network/http_utils.dart';
 import 'package:mighty_delivery/main/utils/storage.dart';
-import '../../main/utils/Constants.dart';
 
 class LocationTrackingService {
   LocationTrackingService._();
@@ -14,9 +17,15 @@ class LocationTrackingService {
   Completer<void>? _startingLock;
 
   DateTime? _lastUploadAt;
-  final Duration uploadInterval = const Duration(minutes: 5);
+  // 与 heartbeatInterval对齐，确保每次心跳都能通过时间窗口判断
+  // final Duration uploadInterval = const Duration(minutes: 3);
+  final Duration uploadInterval = const Duration(seconds: 10);
 
   bg.Location? _lastLocation;
+
+  // ===== New: periodic forced uploader support =====
+  Timer? _periodicTimer; // 每3分钟兜底强制上传一次
+  String? _cachedIdentityUserId; // 缓存登录时传入的 identity (目前是 token, 占位即可)
 
   final _locationStreamController = StreamController<bg.Location>.broadcast();
   Stream<bg.Location> get locationStream => _locationStreamController.stream;
@@ -27,6 +36,7 @@ class LocationTrackingService {
   }) async {
     print(
         '[BG] startTracking(identity=$identityUserId) configured=$_configured started=$_started lock=${_startingLock != null}');
+    _cachedIdentityUserId = identityUserId; // cache for timer fallback
     if (_startingLock != null) {
       await _startingLock!.future;
       print('[BG] waited previous start. started=$_started');
@@ -61,6 +71,7 @@ class LocationTrackingService {
       _started = true;
       print('[BG] already enabled -> skip start()');
       await _forceFirstFix(identityUserId);
+      _startPeriodicUploader();
       return;
     }
 
@@ -71,6 +82,7 @@ class LocationTrackingService {
       _started = true;
       print('[BG] start() success');
       await _forceFirstFix(identityUserId);
+      _startPeriodicUploader();
     } catch (e) {
       print('[BG] start() error: $e');
       rethrow;
@@ -90,6 +102,9 @@ class LocationTrackingService {
         print('[BG] stop error: $e');
       }
       _started = false;
+      // cancel periodic timer
+      _periodicTimer?.cancel();
+      _periodicTimer = null;
     }
   }
 
@@ -104,13 +119,20 @@ class LocationTrackingService {
       desiredAccuracy: bg.Config.DESIRED_ACCURACY_LOW,
       distanceFilter: 1000,
       disableElasticity: true,
-      heartbeatInterval: 180, // 5分钟；调试想快点可临时改 10
+      heartbeatInterval: 180,
       stopOnTerminate: false,
       startOnBoot: true,
       foregroundService: true,
+      enableHeadless: true, // NEW
       allowIdenticalLocations: true,
-      debug: true, // 调试用，确认事件。上线改 false
+      debug: true,
       logLevel: bg.Config.LOG_LEVEL_INFO,
+      notification: bg.Notification(
+        // 持续前台通知，避免被系统判为空进程
+        title: 'Location Service Running',
+        text: 'Tracking delivery position',
+        channelName: 'DeliveryTracking',
+      ),
     ));
 
     print('[BG] ready() -> enabled=${state.enabled}');
@@ -135,6 +157,19 @@ class LocationTrackingService {
     }
   }
 
+  // ===== New: 启动兜底定时上传器 =====
+  void _startPeriodicUploader() {
+    _periodicTimer?.cancel();
+    _periodicTimer = Timer.periodic(uploadInterval, (timer) async {
+      if (!_started) return;
+      final id = _cachedIdentityUserId ?? '';
+      print('[BG] periodic tick -> force upload (idLen=${id.length})');
+      await _tryUpload(force: true, identityUserId: id);
+    });
+    print(
+        '[BG] periodic uploader started interval=${uploadInterval.inSeconds}s');
+  }
+
   void _onLocation(bg.Location location) {
     _lastLocation = location;
     _locationStreamController.add(location);
@@ -147,7 +182,8 @@ class LocationTrackingService {
   }
 
   void _onHeartbeat(bg.HeartbeatEvent event) async {
-    print('[BG] heartbeat @ ${DateTime.now().toIso8601String()}');
+    final now = DateTime.now();
+    print('[BG] heartbeat @ ${now.toIso8601String()}');
     try {
       final loc = await bg.BackgroundGeolocation.getCurrentPosition(
         samples: 1,
@@ -156,8 +192,18 @@ class LocationTrackingService {
         persist: true,
       );
       _onLocation(loc);
-      final identityUserId = SpUtil.token.val;
+      final identityUserId = _cachedIdentityUserId ?? SpUtil.token.val;
+      final last = _lastUploadAt;
+      if (last != null) {
+        final delta = now.difference(last);
+        print(
+            '[BG] since last upload: ${delta.inSeconds}s (threshold=${uploadInterval.inSeconds}s)');
+      } else {
+        print('[BG] since last upload: first run');
+      }
       await _tryUpload(identityUserId: identityUserId);
+      // 如果需要每次心跳无条件上传，改成下面这一行并注释掉上面一行：
+      // await _tryUpload(force: true, identityUserId: identityUserId);
     } catch (e) {
       print('[BG] heartbeat getCurrentPosition error: $e');
     }
@@ -187,12 +233,21 @@ class LocationTrackingService {
     _lastUploadAt = now;
     print('[BG] uploading...');
     try {
-      final r = await HttpUtils.post('/api/mobile/locations/create', data: {
+      // 读取登录/选择车辆时保存的 vehicleId
+      final vehicleId = SpUtil.getJSON("vehicleId");
+      if (vehicleId == null || vehicleId.toString().isEmpty) {
+        print(
+            '[BG] warning: vehicleId missing in storage, will upload without it');
+      }
+      final r = await HttpUtils.postJson('/api/mobile/locations/create', data: {
+        // 按照 Postman 成功示例，仅携带 address / VehicleId / latitude / longitude
+        'address': 'location.',
+        'VehicleId': vehicleId, // 后端示例使用首字母大写
         'latitude': loc.coords.latitude,
         'longitude': loc.coords.longitude,
-        'timeStamp': loc.timestamp,
-        'identityUserId': identityUserId,
-        'address': 'location.'
+        // 如果后端以后需要再加 identityUserId / timeStamp，再放开：
+        // 'identityUserId': someGuid,
+        // 'timeStamp': loc.timestamp.toIso8601String(),
       });
       if (r.code == 0) {
         print('[BG] upload success ${now.toIso8601String()}');

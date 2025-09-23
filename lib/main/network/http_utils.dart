@@ -7,13 +7,11 @@ import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
-import 'package:get/get.dart' as _get;
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../utils/logutil.dart';
 import '../utils/storage.dart';
 import '../utils/toast.dart';
-import 'log.dart';
 import 'response_entity.dart';
 
 typedef StreamCallBack = Function(String var1);
@@ -83,7 +81,7 @@ class HttpUtils {
         // 只处理 401
         if (e.response?.statusCode == 401) {
           final refreshToken = SpUtil.refresh_token.val;
-          if (refreshToken != null && refreshToken.isNotEmpty) {
+          if (refreshToken.isNotEmpty) {
             try {
               // 用 refresh_token 换新 token
               var refreshResponse = await dio.post(
@@ -267,6 +265,40 @@ class HttpUtils {
     }
   }
 
+  /// 专门用于 application/json 的 POST
+  static Future<ResponseEntity<T>> postJson<T>(
+    String path, {
+    dynamic data,
+    Options? options,
+    bool loadingDialog = false,
+    bool showErrorTip = true,
+  }) async {
+    if (loadingDialog) {
+      showLoading();
+    }
+    try {
+      options ??= Options(headers: {'Content-Type': 'application/json'});
+      var response = await dio.post(
+        path,
+        data: data is String ? data : jsonEncode(data),
+        options: options,
+      );
+      Map<String, dynamic> wrappedData = {
+        'code': 0,
+        'msg': 'success',
+        'data': response.data,
+      };
+      return ResponseEntity<T>.fromJson(wrappedData);
+    } catch (e) {
+      if (showErrorTip) {
+        showError('网络错误');
+      }
+      return ResponseEntity<T>.fromJson({'code': 500});
+    } finally {
+      if (loadingDialog) dismissLoading();
+    }
+  }
+
   static void postForStream(
     String path,
     void Function(String event) onData, {
@@ -311,6 +343,7 @@ class HttpUtils {
     },
   );
 
+  // ignore: unused_element
   static Future<void> _dump401Token({
     required String phase,
     required RequestOptions req,
@@ -320,9 +353,8 @@ class HttpUtils {
   }) async {
     try {
       final ts = DateTime.now().toIso8601String();
-      final access = newAccess ?? (SpUtil.token.val?.toString() ?? '');
-      final refresh =
-          newRefresh ?? (SpUtil.refresh_token.val?.toString() ?? '');
+      final access = newAccess ?? (SpUtil.token.val.toString());
+      final refresh = newRefresh ?? (SpUtil.refresh_token.val.toString());
       final authHeader = req.headers['Authorization']?.toString() ?? '';
       final content = StringBuffer()
         ..writeln('[$ts][$phase]')

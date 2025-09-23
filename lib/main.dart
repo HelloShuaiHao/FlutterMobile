@@ -10,6 +10,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:mighty_delivery/main/background_geolocation_headless.dart';
 import 'package:mighty_delivery/main/network/http_utils.dart';
 import 'package:mighty_delivery/main/utils/logutil.dart';
 import '../../extensions/extension_util/string_extensions.dart';
@@ -35,6 +36,8 @@ import 'main/services/UserServices.dart';
 import 'main/store/AppStore.dart';
 import 'main/utils/Common.dart';
 import 'main/utils/firebase_options.dart';
+import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
+    as bg;
 
 final navigatorKey = GlobalKey<NavigatorState>();
 late SharedPreferences sharedPreferences;
@@ -110,6 +113,9 @@ void main() async {
 
   // 接受所有证书
   HttpOverrides.global = MyHttpOverrides();
+
+  bg.BackgroundGeolocation.registerHeadlessTask(
+      backgroundGeolocationHeadlessTask);
 
   runApp(MyApp());
 }

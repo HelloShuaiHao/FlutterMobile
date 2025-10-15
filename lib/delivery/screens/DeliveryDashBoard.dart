@@ -1,5 +1,3 @@
-
-
 import 'package:gallery_saver/gallery_saver.dart';
 import 'dart:async';
 
@@ -146,9 +144,20 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                   const SizedBox(height: 12),
                   TextField(
                     controller: customCtl,
-                    maxLines: 2,
+                    maxLines: 3,
                     decoration: const InputDecoration(
-                        labelText: 'Custom reason (optional)'),
+                      labelText: 'Custom reason *',
+                      hintText: 'Please provide detailed reason',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '* Required field',
+                      style: TextStyle(fontSize: 11, color: Colors.red),
+                    ),
                   ),
                 ],
               ),
@@ -159,21 +168,27 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    String finalReason;
-                    if (current == 'Other') {
-                      finalReason = customCtl.text.trim();
-                    } else {
-                      finalReason = current +
-                          (customCtl.text.trim().isNotEmpty
-                              ? ' - ${customCtl.text.trim()}'
-                              : '');
-                    }
-                    if (finalReason.isEmpty) {
+                    final customReason = customCtl.text.trim();
+
+                    // 检查自定义原因是否为空
+                    if (customReason.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please enter a reason')),
+                        const SnackBar(
+                          content: Text('Please enter a detailed reason'),
+                          backgroundColor: Colors.red,
+                        ),
                       );
                       return;
                     }
+
+                    // 组合最终原因
+                    String finalReason;
+                    if (current == 'Other') {
+                      finalReason = customReason;
+                    } else {
+                      finalReason = '$current - $customReason';
+                    }
+
                     Navigator.pop(ctx, finalReason);
                   },
                   child: const Text('Confirm'),
@@ -604,18 +619,36 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                         bool isExpanded) {
                                       return GestureDetector(
                                         onLongPress: () {
-                                          // 长按事件：弹出对话框显示物品聚合
+                                          // 长按事件：弹出对话框显示物品聚合（合并同名）
                                           showDialog(
                                             context: context,
                                             builder: (BuildContext context) {
                                               // 获取当前地点下所有订单的物品
-                                              final items = group.orders!
+                                              final allTaskItems = group.orders!
                                                   .expand(
                                                       (o) => o.taskItems ?? [])
-                                                  .map((item) =>
-                                                      item['name'] ??
-                                                      'Unknown Item')
                                                   .toList();
+
+                                              // 按名称分组统计数量
+                                              final Map<String, int>
+                                                  nameCountMap = {};
+                                              for (var taskItem
+                                                  in allTaskItems) {
+                                                final itemName =
+                                                    taskItem['name']
+                                                            ?.toString() ??
+                                                        'Unknown Item';
+                                                nameCountMap[itemName] =
+                                                    (nameCountMap[itemName] ??
+                                                            0) +
+                                                        1;
+                                              }
+
+                                              // 排序
+                                              final sortedEntries =
+                                                  nameCountMap.entries.toList()
+                                                    ..sort((a, b) =>
+                                                        a.key.compareTo(b.key));
 
                                               return AlertDialog(
                                                 title: Text(
@@ -625,61 +658,132 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                                           FontWeight.bold,
                                                       fontSize: 18),
                                                 ),
-                                                content: SingleChildScrollView(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: items.map((item) {
-                                                      return Container(
-                                                        margin: EdgeInsets
-                                                            .symmetric(
-                                                                vertical: 8),
-                                                        padding:
-                                                            EdgeInsets.all(12),
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: Colors
-                                                              .grey.shade100,
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(8),
-                                                          boxShadow: [
-                                                            BoxShadow(
-                                                              color: Colors.grey
-                                                                  .withOpacity(
-                                                                      0.2),
-                                                              spreadRadius: 2,
-                                                              blurRadius: 5,
-                                                              offset:
-                                                                  Offset(0, 3),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        child: Row(
-                                                          children: [
-                                                            Icon(
+                                                content: Container(
+                                                  width: double.maxFinite,
+                                                  child: SingleChildScrollView(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: sortedEntries
+                                                          .map((entry) {
+                                                        final itemName =
+                                                            entry.key;
+                                                        final count =
+                                                            entry.value;
+                                                        return Container(
+                                                          margin: EdgeInsets
+                                                              .symmetric(
+                                                                  vertical: 6),
+                                                          padding:
+                                                              EdgeInsets.all(
+                                                                  12),
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            color: Colors
+                                                                .grey.shade100,
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        8),
+                                                            boxShadow: [
+                                                              BoxShadow(
+                                                                color: Colors
+                                                                    .grey
+                                                                    .withOpacity(
+                                                                        0.2),
+                                                                spreadRadius: 1,
+                                                                blurRadius: 3,
+                                                                offset: Offset(
+                                                                    0, 2),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          child: Row(
+                                                            children: [
+                                                              Icon(
                                                                 Icons
                                                                     .inventory_2_outlined,
                                                                 color:
                                                                     Colors.blue,
-                                                                size: 24), // 图标
-                                                            SizedBox(width: 12),
-                                                            Expanded(
-                                                              child: Text(
-                                                                item,
-                                                                style: TextStyle(
+                                                                size: 24,
+                                                              ),
+                                                              SizedBox(
+                                                                  width: 12),
+                                                              Expanded(
+                                                                child: Text(
+                                                                  itemName,
+                                                                  style:
+                                                                      TextStyle(
                                                                     fontSize:
-                                                                        16,
+                                                                        15,
                                                                     fontWeight:
                                                                         FontWeight
-                                                                            .w500),
+                                                                            .w500,
+                                                                  ),
+                                                                ),
                                                               ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      );
-                                                    }).toList(),
+                                                              // 数量列
+                                                              Container(
+                                                                padding: EdgeInsets
+                                                                    .symmetric(
+                                                                        horizontal:
+                                                                            12,
+                                                                        vertical:
+                                                                            6),
+                                                                decoration:
+                                                                    BoxDecoration(
+                                                                  color: count >
+                                                                          1
+                                                                      ? ColorUtils
+                                                                          .colorPrimary
+                                                                          .withOpacity(
+                                                                              0.15)
+                                                                      : Colors
+                                                                          .grey
+                                                                          .shade200,
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              8),
+                                                                  border: count >
+                                                                          1
+                                                                      ? Border.all(
+                                                                          color: ColorUtils.colorPrimary.withOpacity(
+                                                                              0.5),
+                                                                          width:
+                                                                              1.5)
+                                                                      : null,
+                                                                ),
+                                                                child: Text(
+                                                                  '$count',
+                                                                  style:
+                                                                      TextStyle(
+                                                                    fontSize:
+                                                                        16,
+                                                                    fontWeight: count >
+                                                                            1
+                                                                        ? FontWeight
+                                                                            .bold
+                                                                        : FontWeight
+                                                                            .normal,
+                                                                    color: count >
+                                                                            1
+                                                                        ? ColorUtils
+                                                                            .colorPrimary
+                                                                        : Colors
+                                                                            .grey
+                                                                            .shade700,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        );
+                                                      }).toList(),
+                                                    ),
                                                   ),
                                                 ),
                                                 actions: [
@@ -700,11 +804,58 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                           );
                                         },
                                         child: ListTile(
-                                          title: Text(
-                                            "🏚️: ${group.deliveryOrderId ?? 'Unknown Address'}",
-                                            style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 15),
+                                          title: Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  "🏚️: ${group.deliveryOrderId ?? 'Unknown Address'}",
+                                                  style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 15),
+                                                ),
+                                              ),
+                                              // Pickup All 按钮
+                                              ElevatedButton.icon(
+                                                onPressed: () {
+                                                  showConfirmDialogCustom(
+                                                    context,
+                                                    primaryColor:
+                                                        ColorUtils.colorPrimary,
+                                                    dialogType:
+                                                        DialogType.CONFIRMATION,
+                                                    title:
+                                                        'Pickup All Orders at This Address?',
+                                                    subTitle:
+                                                        'This will pickup all ${group.orders!.length} orders at ${group.deliveryOrderId ?? 'this address'}.',
+                                                    positiveText: language.yes,
+                                                    negativeText: language.no,
+                                                    onAccept: (c) async {
+                                                      await _pickupGroupOrders(
+                                                          group);
+                                                    },
+                                                  );
+                                                },
+                                                icon: Icon(Icons.done_all,
+                                                    size: 18,
+                                                    color: Colors.white),
+                                                label: Text('Pickup All',
+                                                    style: TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.white)),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor:
+                                                      ColorUtils.colorPrimary,
+                                                  padding: EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 8),
+                                                  minimumSize: Size(0, 0),
+                                                  tapTargetSize:
+                                                      MaterialTapTargetSize
+                                                          .shrinkWrap,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       );
@@ -1124,124 +1275,135 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                         ),
                       ],
                     ),
-                    // item行
-                    ...List.generate(data.taskItems?.length ?? 0, (i) {
-                      final item = data.taskItems![i];
-                      final itemId = item['id']?.toString() ?? '';
-                      final hasReason = _itemCancelReasons.containsKey(itemId);
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Row(
-                          children: [
-                            // 图标
-                            Container(
-                              decoration: boxDecorationWithRoundedCorners(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color: ColorUtils.borderColor,
-                                      width: appStore.isDarkMode ? 0.2 : 1),
-                                  backgroundColor: context.cardColor),
-                              padding: EdgeInsets.all(4),
-                              child: Image.asset(
-                                parcelTypeIcon(data.parcelType.validate()),
-                                height: 24,
-                                width: 24,
-                                color: Colors.grey,
+                    // item行 - 每个item单独显示
+                    ...List.generate(
+                      data.taskItems?.length ?? 0,
+                      (index) {
+                        final item = data.taskItems![index];
+                        final itemName =
+                            item['name']?.toString() ?? 'Unknown Item';
+                        final itemId = item['id']?.toString() ?? '';
+                        final isSelected = (index < data.itemSelected.length)
+                            ? data.itemSelected[index]
+                            : true;
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Row(
+                            children: [
+                              // 图标
+                              Container(
+                                decoration: boxDecorationWithRoundedCorners(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                        color: ColorUtils.borderColor,
+                                        width: appStore.isDarkMode ? 0.2 : 1),
+                                    backgroundColor: context.cardColor),
+                                padding: EdgeInsets.all(4),
+                                child: Image.asset(
+                                  parcelTypeIcon(data.parcelType.validate()),
+                                  height: 24,
+                                  width: 24,
+                                  color: Colors.grey,
+                                ),
                               ),
-                            ),
-                            SizedBox(width: 5),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('${item['name'] ?? ''}',
-                                      style: TextStyle(fontSize: 15)),
-                                  if (item['itemStatusCode'] != null)
-                                    Container(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
+                              SizedBox(width: 5),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(itemName,
+                                        style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.normal)),
+                                    if (item['itemStatusCode'] != null)
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                              color: getTaskItemStatusColor(
+                                                  item['itemStatusCode']
+                                                      ?.toString())),
+                                          color: getTaskItemStatusColor(
+                                                  item['itemStatusCode']
+                                                      ?.toString())
+                                              .withOpacity(0.1),
+                                        ),
+                                        child: Text(
+                                          '${item['itemStatusCode']}',
+                                          style: TextStyle(
+                                            fontSize: 12,
                                             color: getTaskItemStatusColor(
                                                 item['itemStatusCode']
-                                                    ?.toString())),
-                                        color: getTaskItemStatusColor(
-                                                item['itemStatusCode']
-                                                    ?.toString())
-                                            .withOpacity(0.1),
-                                      ),
-                                      child: Text(
-                                        '${item['itemStatusCode']}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: getTaskItemStatusColor(
-                                              item['itemStatusCode']
-                                                  ?.toString()),
-                                          fontWeight: FontWeight.bold,
+                                                    ?.toString()),
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  if (!data.itemSelected[i] && hasReason)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 2),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          const Icon(Icons.info_outline,
-                                              size: 14, color: Colors.orange),
-                                          const SizedBox(width: 4),
-                                          Expanded(
-                                            child: Text(
-                                              _itemCancelReasons[itemId]!,
-                                              style: const TextStyle(
-                                                  fontSize: 11,
-                                                  color: Colors.orange),
+                                    if (!isSelected &&
+                                        _itemCancelReasons.containsKey(itemId))
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 2),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Icon(Icons.info_outline,
+                                                size: 14, color: Colors.orange),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                _itemCancelReasons[itemId] ??
+                                                    'Cancelled',
+                                                style: const TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors.orange),
+                                              ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                            Checkbox(
-                              visualDensity: VisualDensity.compact,
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                              value: data.itemSelected[i],
-                              onChanged: (val) async {
-                                if (val == null) return;
-                                if (val == false) {
-                                  // prompt reason
-                                  final reason = await _promptCancelReason(
-                                      item['name']?.toString() ?? 'Item');
-                                  if (reason == null) {
-                                    // user cancelled -> keep selected
-                                    setState(() {});
-                                    return;
+                              Checkbox(
+                                visualDensity: VisualDensity.compact,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                value: isSelected,
+                                onChanged: (val) async {
+                                  if (val == null) return;
+                                  if (val == false) {
+                                    final reason =
+                                        await _promptCancelReason(itemName);
+                                    if (reason == null) {
+                                      setState(() {});
+                                      return;
+                                    }
+                                    setState(() {
+                                      data.itemSelected[index] = false;
+                                      if (itemId.isNotEmpty) {
+                                        _itemCancelReasons[itemId] = reason;
+                                      }
+                                    });
+                                  } else {
+                                    setState(() {
+                                      data.itemSelected[index] = true;
+                                      if (itemId.isNotEmpty) {
+                                        _itemCancelReasons.remove(itemId);
+                                      }
+                                    });
                                   }
-                                  setState(() {
-                                    data.itemSelected[i] = false;
-                                    if (itemId.isNotEmpty) {
-                                      _itemCancelReasons[itemId] = reason;
-                                    }
-                                  });
-                                } else {
-                                  setState(() {
-                                    data.itemSelected[i] = true;
-                                    if (itemId.isNotEmpty) {
-                                      _itemCancelReasons.remove(itemId);
-                                    }
-                                  });
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -1299,6 +1461,59 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
         //     duration: 400.milliseconds);
       },
     );
+  }
+
+  // Pickup all orders in a specific address group
+  Future<void> _pickupGroupOrders(GroupedOrderData group) async {
+    try {
+      appStore.setLoading(true);
+
+      int successCount = 0;
+      int failCount = 0;
+
+      for (var order in group.orders ?? []) {
+        try {
+          // 获取选中的 itemIds（所有 InProgress 状态的）
+          final selectedIds = [
+            for (int i = 0; i < order.itemSelected.length; i++)
+              if (order.itemSelected[i])
+                order.taskItems?[i]['id']?.toString() ?? ''
+          ]..removeWhere((id) => id.isEmpty);
+
+          final itemRemarks = _buildItemRemarks(order);
+
+          final routePlanService = RoutePlanService();
+          await routePlanService.addTaskStatus(
+            taskId: order.id!,
+            statusCode: "PickedUp",
+            name: "PickedUp",
+            senderMessage: "Your order has been assigned",
+            receiverMessage: "The order is now assigned to a delivery person",
+            colorHex: "#00FF00",
+            itemIds: selectedIds,
+            itemRemarks: itemRemarks,
+          );
+
+          successCount++;
+        } catch (e) {
+          print('Failed to pickup order ${order.id}: $e');
+          failCount++;
+        }
+      }
+
+      appStore.setLoading(false);
+
+      if (successCount > 0) {
+        toast(
+            'Successfully picked up $successCount order${successCount > 1 ? 's' : ''} at ${group.deliveryOrderId ?? 'this address'}${failCount > 0 ? ', $failCount failed' : ''}');
+        await getOrderListApiCall();
+      } else {
+        toast('Failed to pickup orders');
+      }
+    } catch (e) {
+      appStore.setLoading(false);
+      toast('Error: ${e.toString()}');
+    }
   }
 
   Future<void> onTapData(

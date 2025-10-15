@@ -7,9 +7,7 @@ import 'package:http/io_client.dart';
 import 'package:logging/logging.dart';
 import 'package:mighty_delivery/extensions/shared_pref.dart';
 import 'package:mighty_delivery/main.dart';
-import 'package:mighty_delivery/main/utils/Constants.dart';
 import 'package:mighty_delivery/main/utils/storage.dart';
-import 'package:mighty_delivery/providers/helpers.dart';
 import '../main/network/http_utils.dart'; // Import HttpUtils
 
 enum LoginActions { update, proceed }
@@ -70,16 +68,21 @@ class MyAuthProvider with ChangeNotifier {
         token = accessToken;
         SpUtil.token.val = accessToken;
         SpUtil.refresh_token.val = refreshToken ?? '';
-
-        // await HttpUtils.init(unAuthHandle: () {});
-        // 登录或刷新 token 后
+        // 同步更新 Dio 全局 header
         HttpUtils.refreshTokens(
           accessToken: accessToken,
           refreshToken: refreshToken,
         );
 
-        print("token get: $accessToken");
-        SpUtil.setJSON(IS_LOGGED_IN, true);
+        // 统一使用 SharedPreferences 保存登录状态，避免仅写入 GetStorage 导致进程重启后丢失
+        // （主入口 main.dart 里只从 SharedPreferences 读取 IS_LOGGED_IN）
+        try {
+          await appStore.setLogin(true); // 会写入 SharedPreferences
+        } catch (e) {
+          _logger.warning('Set login state failed: $e');
+        }
+
+        print("[Auth] token acquired length=${accessToken?.length}");
 
         return {
           'action': LoginActions.update,

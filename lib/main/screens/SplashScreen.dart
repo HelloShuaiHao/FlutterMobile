@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'package:date_format/date_format.dart';
 import 'package:flutter/material.dart';
 import '../../delivery/fragment/DHomeFragment.dart';
 import '../../extensions/extension_util/context_extensions.dart';
@@ -12,8 +10,6 @@ import '../../extensions/shared_pref.dart';
 import '../../extensions/system_utils.dart';
 import '../../extensions/text_styles.dart';
 import '../../languageConfiguration/LanguageDataConstant.dart';
-import '../../languageConfiguration/LanguageDefaultJson.dart';
-import '../../languageConfiguration/ServerLanguageResponse.dart';
 import '../../main.dart';
 import '../../main/models/CityListModel.dart';
 import '../../main/network/RestApis.dart';
@@ -21,9 +17,9 @@ import '../../main/screens/LoginScreen.dart';
 import '../../main/screens/WalkThroughScreen.dart';
 import '../../main/utils/Constants.dart';
 import '../../user/screens/DashboardScreen.dart';
-import '../utils/Common.dart';
 import '../utils/Images.dart';
 import 'UserCitySelectScreen.dart';
+import '../../main/utils/storage.dart';
 
 class SplashScreen extends StatefulWidget {
   static String tag = '/SplashScreen';
@@ -41,9 +37,7 @@ class SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> init() async {
-    String versionNo = await getStringAsync(CURRENT_LAN_VERSION,
-        defaultValue: LanguageVersion);
-    // Language version update is giving issues
+    await getStringAsync(CURRENT_LAN_VERSION, defaultValue: LanguageVersion);
 
     initJsonFile(); // 使用本地 JSON 文件初始化语言数据
     performLanguageOperation(defaultServerLanguageData); // 直接操作本地数据
@@ -52,8 +46,20 @@ class SplashScreenState extends State<SplashScreen> {
     Future.delayed(
       Duration(seconds: 1),
       () async {
-        if (appStore.isLoggedIn && getIntAsync(USER_ID) != 0) {
-          await getUserDetail(getIntAsync(USER_ID)).then((value) async {
+        final storedUserId = getIntAsync(USER_ID);
+        final hasToken = SpUtil.token.val.isNotEmpty;
+        debugPrint(
+            '[Splash] isLoggedIn=${appStore.isLoggedIn} userId=$storedUserId tokenLen=${SpUtil.token.val.length}');
+        if (appStore.isLoggedIn && (storedUserId != 0 || hasToken)) {
+          // 如果 userId 还没拿到但有 token，尝试延迟获取一次（可选）
+          if (storedUserId == 0) {
+            // 这里可以调用一个 /me 接口（如果存在），当前先直接进入主界面，后续再刷新用户资料
+            debugPrint(
+                '[Splash] userId missing but token present -> skip fetch, go home');
+            DHomeFragment().launch(context, isNewTask: true);
+            return;
+          }
+          await getUserDetail(storedUserId).then((value) async {
             setValue(IS_VERIFIED_DELIVERY_MAN,
                 !value.documentVerifiedAt.isEmptyOrNull);
             if (value.deliverymanVehicleHistory != null) {
@@ -100,6 +106,8 @@ class SplashScreenState extends State<SplashScreen> {
             }
           }).catchError((e) {
             log(e);
+            debugPrint('[Splash] getUserDetail error -> fallback to home');
+            DHomeFragment().launch(context, isNewTask: true);
           });
         } else {
           if (getBoolAsync(IS_FIRST_TIME, defaultValue: true)) {

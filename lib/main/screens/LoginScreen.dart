@@ -124,7 +124,14 @@ class LoginScreenState extends State<LoginScreen> {
             return;
           }
 
-          // 取得用户标识
+          // 标记登录成功 (SharedPreferences) 供 main.dart 读取
+          await setValue(IS_LOGGED_IN, true);
+          // 可选: 同步保存 token 到 SharedPreferences 方便其它旧逻辑读取
+          if (SpUtil.token.val.isNotEmpty) {
+            await setValue(USER_TOKEN, SpUtil.token.val);
+          }
+
+          // 取得用户标识 (当前直接使用 access token 作为 identity 占位)
           final identityUserId = SpUtil.token.val;
           // 启动后台定位（只需调用一次）
           LocationTrackingService.instance.startTracking(

@@ -1,7 +1,3 @@
-/**
- * 我现在希望用 adb 安装到手机里进行测试 怎么做
- */
-
 import 'dart:async';
 import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
     as bg;
@@ -18,8 +14,8 @@ class LocationTrackingService {
 
   DateTime? _lastUploadAt;
   // 与 heartbeatInterval对齐，确保每次心跳都能通过时间窗口判断
-  // final Duration uploadInterval = const Duration(minutes: 3);
-  final Duration uploadInterval = const Duration(seconds: 10);
+  final Duration uploadInterval = const Duration(minutes: 3);
+  // final Duration uploadInterval = const Duration(seconds: 10);
 
   bg.Location? _lastLocation;
 

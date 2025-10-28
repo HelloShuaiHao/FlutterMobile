@@ -19,7 +19,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "sg.glsapp.gls"
+    namespace = "u.nus.edu.astar.demo"
 //    signingConfigs {
 //         release {
 //             storeFile file('/home/meet09/Downloads/local_delivery.jks')

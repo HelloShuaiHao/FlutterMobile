@@ -40,6 +40,10 @@ import '../../extensions/common.dart';
 import '../../main/screens/NotificationScreen.dart';
 import '../../main/utils/dynamic_theme.dart';
 import '../screens/DeliveryDashBoard.dart';
+import '../../main/services/LocationTrackingService.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
+    as bg;
 
 import 'package:flutter_datetime_picker_plus/flutter_datetime_picker_plus.dart';
 // removed duplicate import of intl/DateFormat (already imported earlier)
@@ -80,7 +84,7 @@ class DHomeFragment extends StatefulWidget {
 }
 
 class _DHomeFragmentState extends State<DHomeFragment>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   int currentPage = 1;
   DashboardCount? countData;
 
@@ -256,6 +260,13 @@ class _DHomeFragmentState extends State<DHomeFragment>
   @override
   void initState() {
     super.initState();
+
+    // ⭐ 新增：注册生命周期监听器
+    WidgetsBinding.instance.addObserver(this);
+
+    // ⭐ 新增：检查并恢复定位服务
+    _checkAndRestoreLocationService();
+
     fetchTaskCountByStatusName(); // 初始化时获取 count
 
     print("当前进入 的页面是：${DHomeFragment()}");
@@ -295,6 +306,49 @@ class _DHomeFragmentState extends State<DHomeFragment>
 
     // 获取不同状态的task的数量
     fetchTaskCountByStatusName();
+  }
+
+  // ⭐ 新增：应用生命周期回调
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    print('[DHOME] App lifecycle changed to: $state');
+
+    if (state == AppLifecycleState.resumed) {
+      // 应用恢复到前台，检查并恢复定位服务
+      _checkAndRestoreLocationService();
+    }
+  }
+
+  // ⭐ 新增：检查并恢复定位服务
+  Future<void> _checkAndRestoreLocationService() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final vehicleId = prefs.getString('vehicleId');
+      final token = prefs.getString('auth_token');
+
+      if (vehicleId == null || token == null) {
+        print(
+            '[DHOME] ⚠️ No vehicleId or token in SharedPreferences, skip restore');
+        return;
+      }
+
+      // 检查定位服务是否运行
+      final bg.State state = await bg.BackgroundGeolocation.state;
+
+      if (!state.enabled) {
+        print('[DHOME] 🔄 Location service stopped, restoring...');
+        final identityUserId = SpUtil.token.val;
+        await LocationTrackingService.instance.startTracking(
+          identityUserId: identityUserId,
+        );
+        print('[DHOME] ✅ Location service restored');
+      } else {
+        print('[DHOME] ✅ Location service already running');
+      }
+    } catch (e) {
+      print('[DHOME] ⚠️ Failed to restore location service: $e');
+    }
   }
 
   @override
@@ -353,6 +407,8 @@ class _DHomeFragmentState extends State<DHomeFragment>
 
   @override
   void dispose() {
+    // ⭐ 新增：移除生命周期监听器
+    WidgetsBinding.instance.removeObserver(this);
     _getOrdersWithBidsStream.cancel();
     _getOrdersWithBidsStreamToCancelBid.cancel();
     reasonController.dispose();

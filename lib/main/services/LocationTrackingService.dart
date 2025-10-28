@@ -131,6 +131,7 @@ class LocationTrackingService {
       stopTimeout: 0, // 禁用超时停止（新增）
       disableStopDetection: true, // 禁用停止检测（新增）
       stopOnStationary: false, // 静止时不停止（新增）
+      preventSuspend: true, // ⭐ 新增：防止应用挂起
 
       disableElasticity: true,
       // heartbeatInterval: 180,
@@ -140,6 +141,10 @@ class LocationTrackingService {
       foregroundService: true,
       enableHeadless: true,
       allowIdenticalLocations: true,
+
+      // ⭐ iOS 配置（跨平台兼容）
+      pausesLocationUpdatesAutomatically: false, // ⭐ 新增：iOS 不自动暂停
+      showsBackgroundLocationIndicator: true, // ⭐ 新增：iOS 显示后台定位指示器
 
       // ⭐ 增强调试
       debug: true,
@@ -153,6 +158,11 @@ class LocationTrackingService {
     ));
 
     print('[BG] ready() -> enabled=${state.enabled}');
+    // ⭐ 新增：验证心跳配置
+    print('[BG] ✅ Verification: heartbeatInterval=${state.heartbeatInterval}');
+    print('[BG] ✅ Verification: stopTimeout=${state.stopTimeout}');
+    print('[BG] ✅ Verification: preventSuspend=${state.preventSuspend}');
+
     if (state.enabled) {
       // 之前已经 start 过（原生 service 可能仍在）
       _started = true;
@@ -209,7 +219,7 @@ class LocationTrackingService {
 
   void _onHeartbeat(bg.HeartbeatEvent event) async {
     final now = DateTime.now();
-    print('[BG] heartbeat @ ${now.toIso8601String()}');
+    print('[BG] ❤️ heartbeat @ ${now.toIso8601String()}'); // ⭐ 修改日志以便识别
     try {
       final loc = await bg.BackgroundGeolocation.getCurrentPosition(
         samples: 1,
@@ -231,7 +241,7 @@ class LocationTrackingService {
       // 如果需要每次心跳无条件上传，改成下面这一行并注释掉上面一行：
       // await _tryUpload(force: true, identityUserId: identityUserId);
     } catch (e) {
-      print('[BG] heartbeat getCurrentPosition error: $e');
+      print('[BG] ❌ heartbeat getCurrentPosition error: $e');
     }
   }
 

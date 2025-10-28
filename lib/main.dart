@@ -114,8 +114,11 @@ void main() async {
   // 接受所有证书
   HttpOverrides.global = MyHttpOverrides();
 
+  // ⭐ 关键：注册 Headless 回调（必须在 runApp 之前）
+  print('[MAIN] Registering headless task...');
   bg.BackgroundGeolocation.registerHeadlessTask(
       backgroundGeolocationHeadlessTask);
+  print('[MAIN] ✅ Headless task registered');
 
   runApp(MyApp());
 }

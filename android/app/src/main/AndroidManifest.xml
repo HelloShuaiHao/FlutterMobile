@@ -9,6 +9,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    
+    <!-- ⭐ 新增：允许应用在设备启动时自动启动 -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- ⭐ 新增：允许应用保持唤醒状态 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
     <!-- 可按需保留，如果 target >= 33 且不再需要外部存储可移除 -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
@@ -77,6 +82,16 @@
         <service
             android:name="com.transistorsoft.locationmanager.service.HeartbeatService"
             android:stopWithTask="false" />
+
+        <!-- ⭐ 新增：监听设备启动完成的广播接收器 -->
+        <receiver
+            android:name="com.transistorsoft.locationmanager.receiver.BootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <meta-data
             android:name="flutterEmbedding"

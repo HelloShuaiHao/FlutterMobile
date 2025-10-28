@@ -158,12 +158,21 @@ class LoginScreenState extends State<LoginScreen> {
                 '[LOGIN] ⚠️ No vehicleId found in GetStorage, please select vehicle first');
           }
 
+          // ⭐ 新增：先停止旧服务（如果有），避免冲突
+          try {
+            await LocationTrackingService.instance.stopTracking();
+            print('[LOGIN] ✅ Stopped old location service (if any)');
+          } catch (e) {
+            print('[LOGIN] ⚠️ Failed to stop old service: $e');
+          }
+
           // 取得用户标识 (当前直接使用 access token 作为 identity 占位)
           final identityUserId = SpUtil.token.val;
           // 启动后台定位（只需调用一次）
-          LocationTrackingService.instance.startTracking(
+          await LocationTrackingService.instance.startTracking(
             identityUserId: identityUserId,
           );
+          print('[LOGIN] ✅ Location service started');
 
           // 登录成功才跳转
           DHomeFragment().launch(context, isNewTask: true);

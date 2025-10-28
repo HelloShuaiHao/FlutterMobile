@@ -129,6 +129,33 @@ class LoginScreenState extends State<LoginScreen> {
           // 可选: 同步保存 token 到 SharedPreferences 方便其它旧逻辑读取
           if (SpUtil.token.val.isNotEmpty) {
             await setValue(USER_TOKEN, SpUtil.token.val);
+
+            // ⭐ 新增：同时保存 token 到 SharedPreferences (供 Headless 使用)
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString('USER_TOKEN', SpUtil.token.val);
+              print(
+                  '[LOGIN] ✅ Saved token to SharedPreferences (length=${SpUtil.token.val.length})');
+            } catch (e) {
+              print('[LOGIN] ⚠️ Failed to save token to SharedPreferences: $e');
+            }
+          }
+
+          // ⭐ 新增：读取已选择的 vehicleId 并同步到 SharedPreferences
+          final vehicleId = SpUtil.getJSON("vehicleId");
+          if (vehicleId != null && vehicleId.toString().isNotEmpty) {
+            try {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setString('vehicleId', vehicleId.toString());
+              print(
+                  '[LOGIN] ✅ Saved vehicleId to SharedPreferences: $vehicleId');
+            } catch (e) {
+              print(
+                  '[LOGIN] ⚠️ Failed to save vehicleId to SharedPreferences: $e');
+            }
+          } else {
+            print(
+                '[LOGIN] ⚠️ No vehicleId found in GetStorage, please select vehicle first');
           }
 
           // 取得用户标识 (当前直接使用 access token 作为 identity 占位)

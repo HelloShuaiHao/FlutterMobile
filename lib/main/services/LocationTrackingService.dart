@@ -14,7 +14,8 @@ class LocationTrackingService {
 
   DateTime? _lastUploadAt;
   // 与 heartbeatInterval对齐，确保每次心跳都能通过时间窗口判断
-  final Duration uploadInterval = const Duration(minutes: 3);
+  // final Duration uploadInterval = const Duration(minutes: 3);
+  final Duration uploadInterval = const Duration(minutes: 1);
   // final Duration uploadInterval = const Duration(seconds: 10);
 
   bg.Location? _lastLocation;
@@ -66,6 +67,11 @@ class LocationTrackingService {
     if (state.enabled) {
       _started = true;
       print('[BG] already enabled -> skip start()');
+
+      // ⭐ 强制移动模式（即使已经启动）
+      await bg.BackgroundGeolocation.changePace(true);
+      print('[BG] ✅ Forced moving state');
+
       await _forceFirstFix(identityUserId);
       _startPeriodicUploader();
       return;
@@ -77,6 +83,11 @@ class LocationTrackingService {
       await bg.BackgroundGeolocation.start();
       _started = true;
       print('[BG] start() success');
+
+      // ⭐ 新增：强制进入移动模式，防止进入静止状态
+      await bg.BackgroundGeolocation.changePace(true);
+      print('[BG] ✅ Forced moving state');
+
       await _forceFirstFix(identityUserId);
       _startPeriodicUploader();
     } catch (e) {
@@ -112,17 +123,28 @@ class LocationTrackingService {
 
     final state = await bg.BackgroundGeolocation.ready(bg.Config(
       reset: false,
-      desiredAccuracy: bg.Config.DESIRED_ACCURACY_LOW,
-      distanceFilter: 1000,
+      // ⭐ 核心修复：提高精度和响应性
+      desiredAccuracy: bg.Config.DESIRED_ACCURACY_HIGH, // HIGH精度（原: LOW）
+      distanceFilter: 50, // 50米触发（原: 1000）
+
+      // ⭐ 核心修复：禁用自动停止逻辑
+      stopTimeout: 0, // 禁用超时停止（新增）
+      disableStopDetection: true, // 禁用停止检测（新增）
+      stopOnStationary: false, // 静止时不停止（新增）
+
       disableElasticity: true,
-      heartbeatInterval: 180,
+      // heartbeatInterval: 180,
+      heartbeatInterval: 60,
       stopOnTerminate: false,
       startOnBoot: true,
       foregroundService: true,
       enableHeadless: true,
       allowIdenticalLocations: true,
+
+      // ⭐ 增强调试
       debug: true,
-      logLevel: bg.Config.LOG_LEVEL_INFO,
+      logLevel: bg.Config.LOG_LEVEL_VERBOSE, // 详细日志（原: INFO）
+
       notification: bg.Notification(
         title: 'Location Service Running',
         text: 'Tracking delivery position',

@@ -321,17 +321,21 @@ class _DHomeFragmentState extends State<DHomeFragment>
   }
 
   // ⭐ 新增：检查并恢复定位服务
+  // ⭐ 修改：检查并恢复定位服务
   Future<void> _checkAndRestoreLocationService() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final vehicleId = prefs.getString('vehicleId');
-      final token = prefs.getString('auth_token');
+      final token = prefs.getString('USER_TOKEN'); // ⭐ 修改：使用正确的 key
 
       if (vehicleId == null || token == null) {
         print(
             '[DHOME] ⚠️ No vehicleId or token in SharedPreferences, skip restore');
         return;
       }
+
+      // ⭐ 新增：延迟检查，避免与冷启动检测冲突
+      await Future.delayed(const Duration(milliseconds: 500));
 
       // 检查定位服务是否运行
       final bg.State state = await bg.BackgroundGeolocation.state;
@@ -344,7 +348,8 @@ class _DHomeFragmentState extends State<DHomeFragment>
         );
         print('[DHOME] ✅ Location service restored');
       } else {
-        print('[DHOME] ✅ Location service already running');
+        print(
+            '[DHOME] ✅ Location service already running (enabled=${state.enabled} isMoving=${state.isMoving})');
       }
     } catch (e) {
       print('[DHOME] ⚠️ Failed to restore location service: $e');

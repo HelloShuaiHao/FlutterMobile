@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer';
 import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:country_code_picker/country_code_picker.dart';
@@ -26,10 +25,7 @@ import 'languageConfiguration/BaseLanguage.dart';
 import 'languageConfiguration/LanguageDataConstant.dart';
 import 'languageConfiguration/LanguageDefaultJson.dart';
 import 'languageConfiguration/ServerLanguageResponse.dart';
-import 'main/helper/encrypt_data.dart';
 import 'main/models/FileModel.dart';
-import 'main/network/RestApis.dart';
-import 'main/screens/NoInternetScreen.dart';
 import 'main/services/AuthServices.dart';
 import 'main/services/NotificationService.dart';
 import 'main/services/UserServices.dart';
@@ -38,6 +34,7 @@ import 'main/utils/Common.dart';
 import 'main/utils/firebase_options.dart';
 import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
     as bg;
+import 'main/services/LocationTrackingService.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 late SharedPreferences sharedPreferences;
@@ -119,6 +116,18 @@ void main() async {
   bg.BackgroundGeolocation.registerHeadlessTask(
       backgroundGeolocationHeadlessTask);
   print('[MAIN] ✅ Headless task registered');
+
+  // ⭐ 修改：延迟冷启动检测，避免与 Headless boot 事件冲突
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    // 等待 1 秒，让 Headless boot 事件完成处理
+    await Future.delayed(const Duration(seconds: 1));
+    try {
+      print('[MAIN] Checking cold start state after delay...');
+      await LocationTrackingService.instance.ensureColdStartInit();
+    } catch (e) {
+      print('[MAIN] ensureColdStartInit error: $e');
+    }
+  });
 
   runApp(MyApp());
 }

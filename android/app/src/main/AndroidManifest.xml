@@ -29,13 +29,17 @@
         android:enableOnBackInvokedCallback="false"
         android:usesCleartextTraffic="false">
 
+        <!-- ⭐ Transistorsoft background-geolocation 核心服务 -->
+        <!-- 注意：只需要声明 TrackingService，其他组件由插件自动注入 -->
         <service
             android:name="com.transistorsoft.locationmanager.service.TrackingService"
             android:foregroundServiceType="location"
-            android:stopWithTask="false"/>
+            android:exported="false" />
         <service
-            android:name="com.transistorsoft.locationmanager.service.HeartbeatService"
-            android:stopWithTask="false"/>
+            android:name="com.transistorsoft.locationmanager.service.LocationRequestService"
+            android:foregroundServiceType="location"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="true" />
             
         <!-- 许可证 -->
         <meta-data
@@ -75,23 +79,14 @@
             </intent-filter>
         </activity>
 
-        <service
-            android:name="com.transistorsoft.locationmanager.service.TrackingService"
-            android:foregroundServiceType="location"
-            android:stopWithTask="false" />
-        <service
-            android:name="com.transistorsoft.locationmanager.service.HeartbeatService"
-            android:stopWithTask="false" />
+        <activity
+            android:name="com.yalantis.ucrop.UCropActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"/>
 
-        <!-- ⭐ 新增：监听设备启动完成的广播接收器 -->
-        <receiver
-            android:name="com.transistorsoft.locationmanager.receiver.BootReceiver"
-            android:enabled="true"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
+        <!-- ⭐ 重要说明：不要手动声明 BootReceiver、AlarmReceiver、GeofenceBroadcastReceiver -->
+        <!-- flutter_background_geolocation 插件会通过 Gradle 自动注入这些组件 -->
+        <!-- 手动声明会导致 ClassNotFoundException 崩溃 -->
 
         <meta-data
             android:name="flutterEmbedding"

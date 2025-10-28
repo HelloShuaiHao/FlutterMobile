@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
     as bg;
 import 'package:mighty_delivery/main/network/http_utils.dart';
+import 'package:mighty_delivery/main/utils/storage.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // ⭐ 改用 SharedPreferences
 
 /// Headless 回调函数
@@ -34,15 +37,91 @@ void backgroundGeolocationHeadlessTask(bg.HeadlessEvent event) async {
     }
   }
 
+  // 在关键事件上保证配置被重新应用 (防止被系统重置)
+  Future<void> _ensureConfig() async {
+    try {
+      final state = await bg.BackgroundGeolocation.state;
+      // 仅在必要时 setConfig, 避免无谓调用
+      if (state.distanceFilter != 0 || state.heartbeatInterval != 60) {
+        print('[HEADLESS] enforcing config distanceFilter=0 heartbeat=60');
+        await bg.BackgroundGeolocation.setConfig(bg.Config(
+          distanceFilter: 0,
+          heartbeatInterval: 60,
+          stopTimeout: 0,
+          disableStopDetection: true,
+          stopOnTerminate: false,
+          startOnBoot: true,
+          foregroundService: true,
+          enableHeadless: true,
+          desiredAccuracy: bg.Config.DESIRED_ACCURACY_HIGH,
+          locationUpdateInterval: 60000,
+          fastestLocationUpdateInterval: 30000,
+          allowIdenticalLocations: true,
+          debug: true,
+          logLevel: bg.Config.LOG_LEVEL_VERBOSE,
+        ));
+      }
+      if (state.isMoving != true) {
+        await bg.BackgroundGeolocation.changePace(true);
+        print('[HEADLESS] forced moving (ensureConfig)');
+      }
+    } catch (e) {
+      print('[HEADLESS] ensureConfig error: $e');
+    }
+  }
+
+  Future<void> _safe(Function fn) async {
+    try {
+      await fn();
+    } catch (e) {
+      print('[HEADLESS] safe wrapper error: $e');
+    }
+  }
+
   switch (event.name) {
     case bg.Event.LOCATION:
-      await _handleLocation(event.event as bg.Location);
+      await _safe(() async {
+        await _ensureConfig();
+        await _handleLocation(event.event as bg.Location);
+      });
+      break;
+    case bg.Event.MOTIONCHANGE:
+      try {
+        // event.event 可能是 Map 或含有 location 字段
+        final raw = event.event;
+        await _ensureConfig();
+        if (raw is Map && raw['location'] != null) {
+          // location 序列化结构由插件提供；用 BackgroundGeolocation API 再拉一次更保险
+          final fresh = await bg.BackgroundGeolocation.getCurrentPosition(
+            samples: 1,
+            timeout: 15000,
+            desiredAccuracy: bg.Config.DESIRED_ACCURACY_LOW,
+            persist: true,
+          );
+          await _handleLocation(fresh);
+        } else {
+          // 直接再取一次当前位置
+          final fresh = await bg.BackgroundGeolocation.getCurrentPosition(
+            samples: 1,
+            timeout: 15000,
+            desiredAccuracy: bg.Config.DESIRED_ACCURACY_LOW,
+            persist: true,
+          );
+          await _handleLocation(fresh);
+        }
+      } catch (e) {
+        print('[HEADLESS] motionchange handling error: $e');
+      }
+      break;
+    case bg.Event.PROVIDERCHANGE:
+      // 仅记录，某些 ROM 会在 providerchange 后紧跟一次 location
+      print('[HEADLESS] providerchange payload=${jsonEncode(event.event)}');
       break;
 
     case bg.Event.HEARTBEAT:
-      print('[HEADLESS] HEARTBEAT - fetching current position');
-      // 心跳事件：主动获取当前位置并上传
-      try {
+      await _safe(() async {
+        print('[HEADLESS] HEARTBEAT - enforce config & fetch');
+        await _ensureConfig();
         final loc = await bg.BackgroundGeolocation.getCurrentPosition(
           samples: 1,
           timeout: 30000,
@@ -50,15 +129,15 @@ void backgroundGeolocationHeadlessTask(bg.HeadlessEvent event) async {
           persist: true,
         );
         await _handleLocation(loc);
-      } catch (e) {
-        print('[HEADLESS] heartbeat getCurrentPosition error: $e');
-      }
+        print('[HEADLESS] ❤️ heartbeat upload attempted');
+      });
       break;
 
     case bg.Event.TERMINATE:
       print('[HEADLESS] TERMINATE - app terminated');
       // App 终止事件：可选择上传最后位置
       try {
+        await _ensureConfig();
         final state = await bg.BackgroundGeolocation.state;
         if (state.enabled) {
           final loc = await bg.BackgroundGeolocation.getCurrentPosition(
@@ -72,6 +151,19 @@ void backgroundGeolocationHeadlessTask(bg.HeadlessEvent event) async {
         print('[HEADLESS] terminate position error: $e');
       }
       break;
+    case bg.Event.BOOT:
+      await _safe(() async {
+        print('[HEADLESS] BOOT - enforce config & force moving');
+        await _ensureConfig();
+        final loc = await bg.BackgroundGeolocation.getCurrentPosition(
+          samples: 1,
+          timeout: 30000,
+          desiredAccuracy: bg.Config.DESIRED_ACCURACY_LOW,
+          persist: true,
+        );
+        await _handleLocation(loc);
+      });
+      break;
 
     default:
       print('[HEADLESS] unhandled event: ${event.name}');
@@ -83,6 +175,35 @@ void backgroundGeolocationHeadlessTask(bg.HeadlessEvent event) async {
 Future<void> _handleLocation(bg.Location loc) async {
   print(
       '[HEADLESS] location lat=${loc.coords.latitude} lon=${loc.coords.longitude}');
+
+  // ⭐ 新增：去重逻辑 - 检查是否和上次位置相同且时间过近
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final lastLat = prefs.getDouble('lastUploadLat');
+    final lastLon = prefs.getDouble('lastUploadLon');
+    final lastUploadTime = prefs.getInt('lastHeadlessUploadTime') ?? 0;
+    final currentTime = DateTime.now().millisecondsSinceEpoch;
+
+    // 如果位置相同（精度到小数点后6位）且时间间隔小于 5 秒，跳过
+    if (lastLat != null && lastLon != null) {
+      final latDiff = (loc.coords.latitude - lastLat).abs();
+      final lonDiff = (loc.coords.longitude - lastLon).abs();
+      final timeDiff = currentTime - lastUploadTime;
+
+      if (latDiff < 0.000001 && lonDiff < 0.000001 && timeDiff < 5000) {
+        print(
+            '[HEADLESS] ⏭️ Skipping duplicate upload (same location within 5s)');
+        return;
+      }
+    }
+
+    // 记录本次上传的位置和时间
+    await prefs.setDouble('lastUploadLat', loc.coords.latitude);
+    await prefs.setDouble('lastUploadLon', loc.coords.longitude);
+    await prefs.setInt('lastHeadlessUploadTime', currentTime);
+  } catch (e) {
+    print('[HEADLESS] ⚠️ Failed to check/save deduplication data: $e');
+  }
 
   // ⭐ 关键修改：使用 SharedPreferences 替代 GetStorage
   String? vehicleId;
@@ -108,22 +229,73 @@ Future<void> _handleLocation(bg.Location loc) async {
     print('[HEADLESS] ⚠️ Failed to read SharedPreferences: $e');
   }
 
+  // ===== 构造 payload =====
+  // Address 逻辑：优先从 SharedPreferences 读取最近一次前台保存的 address（如果你后续在前台写入）
+  String address = 'location.'; // 默认占位
   try {
-    final resp =
-        await HttpUtils.postJson('/api/mobile/locations/create', data: {
-      'address': 'location.',
-      'VehicleId': vehicleId,
-      'latitude': loc.coords.latitude,
-      'longitude': loc.coords.longitude,
-    });
+    final prefs = await SharedPreferences.getInstance();
+    final lastAddress = prefs.getString('LAST_KNOWN_ADDRESS');
+    if (lastAddress != null && lastAddress.isNotEmpty) {
+      address = lastAddress;
+    }
+  } catch (_) {}
 
-    if (resp.code == 0) {
-      print(
-          '[HEADLESS] ✅ upload success ${DateTime.now().toUtc().toIso8601String()}');
+  final payload = <String, dynamic>{
+    'address': address,
+    'VehicleId': vehicleId,
+    'latitude': loc.coords.latitude,
+    'longitude': loc.coords.longitude,
+  };
+  print('[HEADLESS] 📤 Uploading payload: $payload');
+
+  // 优先使用独立 Dio，避免 HttpUtils 可能尚未 init（主 isolate 尚未运行）
+  try {
+    final base = SpUtil.baseUrl.val;
+    final Dio dio = Dio(BaseOptions(
+      baseUrl: base,
+      connectTimeout: const Duration(seconds: 30),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        '__tenant': 'CF',
+      },
+    ));
+
+    print(
+        '[HEADLESS] baseUrl=$base hasToken=${token != null && token.isNotEmpty}');
+    final resp = await dio.post(
+      '/api/mobile/locations/create',
+      data: jsonEncode(payload),
+    );
+
+    if (resp.statusCode != null &&
+        resp.statusCode! >= 200 &&
+        resp.statusCode! < 300) {
+      print('[HEADLESS] ✅ upload success (raw) status=${resp.statusCode}');
     } else {
-      print('[HEADLESS] ❌ upload fail code=${resp.code} msg=${resp.msg}');
+      print(
+          '[HEADLESS] ❌ raw http status=${resp.statusCode} body=${resp.data}');
     }
   } catch (e) {
-    print('[HEADLESS] ⚠️ upload exception $e');
+    print('[HEADLESS] ⚠️ direct Dio upload failed: $e');
+    // 回退使用 HttpUtils（如果已经初始化）
+    try {
+      // Fallback: 使用已初始化的 HttpUtils (主 isolate 已经跑起来的情况下)
+      try {
+        final wrapper = await HttpUtils.postJson('/api/mobile/locations/create',
+            data: payload, showErrorTip: false);
+        if (wrapper.code == 0) {
+          print('[HEADLESS] ✅ fallback upload success');
+          return;
+        } else {
+          print('[HEADLESS] ❌ fallback wrapper code=${wrapper.code}');
+        }
+      } catch (_) {
+        // ignore
+      }
+    } catch (ee) {
+      print('[HEADLESS] ❌ fallback upload exception $ee');
+    }
   }
 }

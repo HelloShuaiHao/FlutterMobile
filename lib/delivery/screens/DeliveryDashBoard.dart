@@ -221,6 +221,53 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
     return ColorUtils.colorPrimary;
   }
 
+  // 合并相同的物品并计数
+  List<Map<String, dynamic>> _mergeAndCountItems(List<dynamic>? taskItems) {
+    if (taskItems == null || taskItems.isEmpty) return [];
+
+    final Map<String, Map<String, dynamic>> itemMap = {};
+
+    for (var item in taskItems) {
+      final itemName = item['name']?.toString() ?? 'Unknown Item';
+      final itemId = item['id']?.toString() ?? '';
+
+      if (itemMap.containsKey(itemName)) {
+        // 相同名称的物品，增加数量
+        itemMap[itemName]!['count'] = (itemMap[itemName]!['count'] as int) + 1;
+        // 保存所有相同物品的ID和索引
+        (itemMap[itemName]!['indices'] as List<int>)
+            .add(taskItems.indexOf(item));
+        (itemMap[itemName]!['ids'] as List<String>).add(itemId);
+      } else {
+        // 新物品
+        itemMap[itemName] = {
+          'name': itemName,
+          'count': 1,
+          'item': item, // 保存第一个物品的完整信息
+          'indices': [taskItems.indexOf(item)], // 保存所有索引
+          'ids': [itemId], // 保存所有ID
+        };
+      }
+    }
+
+    return itemMap.values.toList();
+  }
+
+  // 检查合并后的物品是否全部选中
+  bool _isGroupSelected(OrderData data, List<int> indices) {
+    return indices.every((index) =>
+        index < data.itemSelected.length && data.itemSelected[index]);
+  }
+
+  // 检查合并后的物品是否部分选中
+  bool _isGroupPartiallySelected(OrderData data, List<int> indices) {
+    final selectedCount = indices
+        .where((index) =>
+            index < data.itemSelected.length && data.itemSelected[index])
+        .length;
+    return selectedCount > 0 && selectedCount < indices.length;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1275,21 +1322,31 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                         ),
                       ],
                     ),
-                    // item行 - 每个item单独显示
-                    ...List.generate(
-                      data.taskItems?.length ?? 0,
-                      (index) {
-                        final item = data.taskItems![index];
-                        final itemName =
-                            item['name']?.toString() ?? 'Unknown Item';
-                        final itemId = item['id']?.toString() ?? '';
-                        final isSelected = (index < data.itemSelected.length)
-                            ? data.itemSelected[index]
-                            : true;
+                    // item行 - 合并相同物品并显示数量
+                    ...(() {
+                      final mergedItems = _mergeAndCountItems(data.taskItems);
+                      return mergedItems.map((mergedItem) {
+                        final itemName = mergedItem['name'] as String;
+                        final itemCount = mergedItem['count'] as int;
+                        final item = mergedItem['item'] as Map<String, dynamic>;
+                        final indices = mergedItem['indices'] as List<int>;
+                        final ids = mergedItem['ids'] as List<String>;
+
+                        final isGroupSelected = _isGroupSelected(data, indices);
+                        final isGroupPartial =
+                            _isGroupPartiallySelected(data, indices);
+
+                        // 检查是否有取消原因
+                        final cancelReasons = ids
+                            .where((id) => _itemCancelReasons.containsKey(id))
+                            .map((id) => _itemCancelReasons[id])
+                            .toSet()
+                            .toList();
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 2),
                           child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // 图标
                               Container(
@@ -1307,76 +1364,110 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                   color: Colors.grey,
                                 ),
                               ),
-                              SizedBox(width: 5),
+                              SizedBox(width: 8),
+                              // 物品名称（左侧，可扩展）
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(itemName,
-                                        style: TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.normal)),
+                                    Text(
+                                      itemName,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.normal,
+                                      ),
+                                    ),
                                     if (item['itemStatusCode'] != null)
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          border: Border.all(
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Container(
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            border: Border.all(
+                                                color: getTaskItemStatusColor(
+                                                    item['itemStatusCode']
+                                                        ?.toString())),
+                                            color: getTaskItemStatusColor(
+                                                    item['itemStatusCode']
+                                                        ?.toString())
+                                                .withOpacity(0.1),
+                                          ),
+                                          child: Text(
+                                            '${item['itemStatusCode']}',
+                                            style: TextStyle(
+                                              fontSize: 12,
                                               color: getTaskItemStatusColor(
                                                   item['itemStatusCode']
-                                                      ?.toString())),
-                                          color: getTaskItemStatusColor(
-                                                  item['itemStatusCode']
-                                                      ?.toString())
-                                              .withOpacity(0.1),
-                                        ),
-                                        child: Text(
-                                          '${item['itemStatusCode']}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: getTaskItemStatusColor(
-                                                item['itemStatusCode']
-                                                    ?.toString()),
-                                            fontWeight: FontWeight.bold,
+                                                      ?.toString()),
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    if (!isSelected &&
-                                        _itemCancelReasons.containsKey(itemId))
+                                    if (cancelReasons.isNotEmpty)
                                       Padding(
-                                        padding: const EdgeInsets.only(top: 2),
-                                        child: Row(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
-                                          children: [
-                                            const Icon(Icons.info_outline,
-                                                size: 14, color: Colors.orange),
-                                            const SizedBox(width: 4),
-                                            Expanded(
-                                              child: Text(
-                                                _itemCancelReasons[itemId] ??
-                                                    'Cancelled',
-                                                style: const TextStyle(
-                                                    fontSize: 11,
-                                                    color: Colors.orange),
+                                          children: cancelReasons.map((reason) {
+                                            return Padding(
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 2),
+                                              child: Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  const Icon(Icons.info_outline,
+                                                      size: 14,
+                                                      color: Colors.orange),
+                                                  const SizedBox(width: 4),
+                                                  Expanded(
+                                                    child: Text(
+                                                      reason ?? 'Cancelled',
+                                                      style: const TextStyle(
+                                                          fontSize: 11,
+                                                          color: Colors.orange),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                            ),
-                                          ],
+                                            );
+                                          }).toList(),
                                         ),
                                       ),
                                   ],
                                 ),
                               ),
+                              SizedBox(width: 8),
+                              // 数量（右侧，固定宽度，与checkbox对齐）
+                              Container(
+                                width: 40,
+                                alignment: Alignment.center,
+                                child: Text(
+                                  'x$itemCount',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: ColorUtils.colorPrimary,
+                                  ),
+                                ),
+                              ),
+                              // Checkbox（右侧）
                               Checkbox(
                                 visualDensity: VisualDensity.compact,
                                 materialTapTargetSize:
                                     MaterialTapTargetSize.shrinkWrap,
-                                value: isSelected,
+                                value: isGroupSelected,
+                                tristate: isGroupPartial,
                                 onChanged: (val) async {
                                   if (val == null) return;
+
                                   if (val == false) {
+                                    // 取消选中整组
                                     final reason =
                                         await _promptCancelReason(itemName);
                                     if (reason == null) {
@@ -1384,16 +1475,23 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                       return;
                                     }
                                     setState(() {
-                                      data.itemSelected[index] = false;
-                                      if (itemId.isNotEmpty) {
-                                        _itemCancelReasons[itemId] = reason;
+                                      for (int i = 0; i < indices.length; i++) {
+                                        final index = indices[i];
+                                        data.itemSelected[index] = false;
+                                        if (ids[i].isNotEmpty) {
+                                          _itemCancelReasons[ids[i]] = reason;
+                                        }
                                       }
                                     });
                                   } else {
+                                    // 选中整组
                                     setState(() {
-                                      data.itemSelected[index] = true;
-                                      if (itemId.isNotEmpty) {
-                                        _itemCancelReasons.remove(itemId);
+                                      for (int i = 0; i < indices.length; i++) {
+                                        final index = indices[i];
+                                        data.itemSelected[index] = true;
+                                        if (ids[i].isNotEmpty) {
+                                          _itemCancelReasons.remove(ids[i]);
+                                        }
                                       }
                                     });
                                   }
@@ -1402,8 +1500,8 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                             ],
                           ),
                         );
-                      },
-                    ),
+                      }).toList();
+                    })(),
                   ],
                 ),
               ),
@@ -1705,3 +1803,8 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
     }
   }
 }
+
+// 现象描述：可以发现，我在LoginScreen第137行 LocationTrackingService.instance.startTracking(); 调用了这个单例服务的startTracking方法，
+// 也就意味着 每次登录成功都会启动定位服务，
+// 但是通过测试发现，每次swipe掉app再重新打开后，定位服务就停止了，无法自动恢复。
+// 另外 最好就算swipe掉app后 还能继续定位上传，毕竟后台定位服务的意义就在于此。

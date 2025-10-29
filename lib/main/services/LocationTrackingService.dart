@@ -115,8 +115,39 @@ class LocationTrackingService {
       print('[BG] start() success');
       await bg.BackgroundGeolocation.changePace(true);
       print('[BG] ✅ Forced moving state');
+
+      // ⭐ 新增：强制触发第一次心跳（验证心跳是否工作）
+      try {
+        print('[BG] 🔥 Triggering first heartbeat manually...');
+        final loc = await bg.BackgroundGeolocation.getCurrentPosition(
+          samples: 1,
+          timeout: 10000,
+          desiredAccuracy: bg.Config.DESIRED_ACCURACY_LOW,
+        );
+        print(
+            '[BG] 🔥 First heartbeat location: lat=${loc.coords.latitude} lon=${loc.coords.longitude}');
+      } catch (e) {
+        print('[BG] 🔥 First heartbeat failed (not critical): $e');
+      }
+
       await _forceFirstFix(identityUserId);
       _startPeriodicUploader();
+
+      // ⭐ 新增：启动后立即测试心跳机制
+      print('[BG] 🧪 Testing heartbeat mechanism...');
+
+      // 检查原生调度器状态
+      final scheduleState = await bg.BackgroundGeolocation.state;
+      print('[BG] 📋 Native scheduler state:');
+      print('[BG]   - heartbeatInterval: ${scheduleState.heartbeatInterval}s');
+      print('[BG]   - enabled: ${scheduleState.enabled}');
+      print('[BG]   - isMoving: ${scheduleState.isMoving}');
+      print('[BG]   - trackingMode: ${scheduleState.trackingMode}');
+      print('[BG]   - distanceFilter: ${scheduleState.distanceFilter}');
+
+      print(
+          '[BG] ✅ Service started with heartbeat=${scheduleState.heartbeatInterval}s');
+      print('[BG] ⏰ Next heartbeat expected in ~60 seconds...');
     } catch (e) {
       print('[BG] start() error: $e');
       // Retry once after short delay if start fails
@@ -156,76 +187,110 @@ class LocationTrackingService {
   }
 
   Future<void> _configure() async {
-    if (_configured) return;
+    if (_configured) {
+      print('[BG] already configured, skipping');
+      return;
+    }
+
     print('[BG] configuring plugin...');
     bg.BackgroundGeolocation.onLocation(_onLocation, _onLocationError);
     bg.BackgroundGeolocation.onHeartbeat(_onHeartbeat);
 
-    final state = await bg.BackgroundGeolocation.ready(bg.Config(
-      reset: false,
-      // ⭐ 核心修复：提高精度和响应性
-      desiredAccuracy: bg.Config.DESIRED_ACCURACY_HIGH, // HIGH精度
-      // ⭐ 关键: distanceFilter=0 让插件进入基于时间的心跳/interval 机制, 便于静止时仍获取点
-      distanceFilter: 0,
+    try {
+      // ⭐ 步骤1：使用 ready() 初始化基础配置
+      final state = await bg.BackgroundGeolocation.ready(bg.Config(
+        reset: false,
 
-      // ⭐ 核心修复：禁用自动停止逻辑
-      stopTimeout: 0, // 禁用超时停止（新增）
-      disableStopDetection: true, // 禁用停止检测（新增）
-      stopOnStationary: false, // 静止时不停止（新增）
+        // ============ 核心配置 ============
+        stopOnTerminate: false,
+        startOnBoot: true,
+        enableHeadless: true,
+        foregroundService: true,
 
-      // ⭐ 新增：强制活动模式，提高心跳触发率
-      activityType: bg.Config.ACTIVITY_TYPE_OTHER, // 不使用自动活动识别
-      // 由于我们使用 distanceFilter=0, 通过 interval 控制频率 (1分钟)
-      locationUpdateInterval: 60000, // 60 秒请求一次
-      fastestLocationUpdateInterval: 30000, // 最快 30 秒 (防抖)
+        // ============ 心跳配置（关键！）============
+        heartbeatInterval: 60, // 60秒心跳
 
-      disableElasticity: true,
-      // heartbeatInterval: 180,
-      // 心跳 60 秒; 如果系统节流, 实际可能更长
-      heartbeatInterval: 60,
-      stopOnTerminate: false,
-      startOnBoot: true,
-      foregroundService: true,
-      enableHeadless: true,
-      allowIdenticalLocations: true,
+        // ⭐ 关键：停止检测配置
+        disableStopDetection: true, // 禁用停止检测
+        stopTimeout: 0, // 永不自动停止
+        stopOnStationary: false, // 静止时不停止
 
-      // ⭐ iOS 配置（跨平台兼容）
-      pausesLocationUpdatesAutomatically: false, // ⭐ 新增：iOS 不自动暂停
-      showsBackgroundLocationIndicator: true, // ⭐ 新增：iOS 显示后台定位指示器
+        // ⭐ 关键：位置更新配置
+        distanceFilter: 0, // 距离过滤为0（依赖心跳）
+        desiredAccuracy: bg.Config.DESIRED_ACCURACY_HIGH,
+        locationUpdateInterval: 60000, // 60秒更新间隔
+        fastestLocationUpdateInterval: 30000,
+        allowIdenticalLocations: true,
 
-      // ⭐ 增强调试
-      debug: true,
-      logLevel: bg.Config.LOG_LEVEL_VERBOSE, // 详细日志（原: INFO）
+        // ⭐ 关键：电池优化相关
+        disableElasticity: true, // 禁用弹性策略
+        activityType: bg.Config.ACTIVITY_TYPE_OTHER,
 
-      notification: bg.Notification(
-        title: 'Location Service Running',
-        text: 'Tracking delivery position',
-        channelName: 'DeliveryTracking',
-      ),
-    ));
+        // ⭐ iOS 配置（跨平台兼容）
+        pausesLocationUpdatesAutomatically: false,
+        showsBackgroundLocationIndicator: true,
 
-    print('[BG] ready() -> enabled=${state.enabled}');
-    // ⭐ 新增：验证心跳配置
-    print('[BG] ✅ Verification: heartbeatInterval=${state.heartbeatInterval}');
-    print('[BG] ✅ Verification: stopTimeout=${state.stopTimeout}');
-    print(
-        '[BG] ✅ Verification: disableStopDetection=${state.disableStopDetection}');
-    print('[BG] ✅ Verification: activityType=${state.activityType}');
-    print(
-        '[BG] ✅ Verification: locationUpdateInterval=${state.locationUpdateInterval}');
+        // ============ Android 特定配置 ============
+        notification: bg.Notification(
+          title: 'Location Service Running',
+          text: 'Tracking delivery position',
+          channelName: 'DeliveryTracking',
+          priority: bg.Config.NOTIFICATION_PRIORITY_HIGH,
+          sticky: true,
+        ),
 
-    if (state.enabled) {
-      // 之前已经 start 过（原生 service 可能仍在）
-      _started = true;
-      _cachedIdentityUserId ??= SpUtil.token.val; // 尝试恢复 identity
-      _startPeriodicUploader(); // 之前缺失
-      await _tryUpload(
-        force: true,
-        identityUserId: _cachedIdentityUserId ?? '',
-      );
+        // ============ 调试配置 ============
+        debug: true,
+        logLevel: bg.Config.LOG_LEVEL_VERBOSE,
+        logMaxDays: 3,
+      ));
+
+      print('[BG] ready() -> enabled=${state.enabled}');
+
+      // ⭐ 步骤2：使用 setConfig 强制应用关键配置（确保生效）
+      await bg.BackgroundGeolocation.setConfig(bg.Config(
+        heartbeatInterval: 60,
+        disableStopDetection: true,
+        stopTimeout: 0,
+        distanceFilter: 0,
+        locationUpdateInterval: 60000,
+        fastestLocationUpdateInterval: 30000,
+      ));
+
+      print('[BG] ✅ Advanced config applied via setConfig');
+
+      // ⭐ 步骤3：验证配置是否生效
+      final verifyState = await bg.BackgroundGeolocation.state;
+      print(
+          '[BG] ✅ Verification: heartbeatInterval=${verifyState.heartbeatInterval}');
+      print('[BG] ✅ Verification: stopTimeout=${verifyState.stopTimeout}');
+      print(
+          '[BG] ✅ Verification: disableStopDetection=${verifyState.disableStopDetection}');
+      print(
+          '[BG] ✅ Verification: distanceFilter=${verifyState.distanceFilter}');
+      print(
+          '[BG] ✅ Verification: locationUpdateInterval=${verifyState.locationUpdateInterval}');
+      print(
+          '[BG] ✅ Verification: scheduleUseAlarmManager=${verifyState.scheduleUseAlarmManager}');
+
+      if (verifyState.enabled) {
+        // 之前已经 start 过（原生 service 可能仍在）
+        _started = true;
+        _cachedIdentityUserId ??= SpUtil.token.val; // 尝试恢复 identity
+        _startPeriodicUploader(); // 之前缺失
+        await _tryUpload(
+          force: true,
+          identityUserId: _cachedIdentityUserId ?? '',
+        );
+      }
+
+      _configured = true;
+      print('[BG] configure done');
+    } catch (e, stack) {
+      print('[BG] ❌ configure error: $e');
+      print(stack);
+      rethrow;
     }
-    _configured = true;
-    print('[BG] configure done');
   }
 
   Future<void> _forceFirstFix(String identityUserId) async {
@@ -271,6 +336,18 @@ class LocationTrackingService {
   void _onHeartbeat(bg.HeartbeatEvent event) async {
     final now = DateTime.now();
     print('[BG] ❤️ heartbeat @ ${now.toIso8601String()}'); // 心跳触发
+
+    // ⭐ 新增：检查心跳来源和状态
+    try {
+      final state = await bg.BackgroundGeolocation.state;
+      print(
+          '[BG] ❤️ State check: enabled=${state.enabled} isMoving=${state.isMoving}');
+      print(
+          '[BG] ❤️ Heartbeat config: interval=${state.heartbeatInterval}s alarm=${state.scheduleUseAlarmManager}');
+    } catch (e) {
+      print('[BG] ❤️ Failed to get state: $e');
+    }
+
     try {
       final loc = await bg.BackgroundGeolocation.getCurrentPosition(
         samples: 1,

@@ -68,10 +68,11 @@ fi
 echo ""
 
 # 步骤5：授予后台位置权限
-echo -e "${YELLOW}🔐 步骤5/6: 授予后台位置权限...${NC}"
+echo -e "${YELLOW}🔐 步骤5/7: 授予后台位置权限...${NC}"
 adb shell pm grant u.nus.edu.astar.demo android.permission.ACCESS_FINE_LOCATION
 adb shell pm grant u.nus.edu.astar.demo android.permission.ACCESS_COARSE_LOCATION
 adb shell pm grant u.nus.edu.astar.demo android.permission.ACCESS_BACKGROUND_LOCATION
+adb shell pm grant u.nus.edu.astar.demo android.permission.POST_NOTIFICATIONS
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✅ 权限授予成功${NC}"
 else
@@ -79,35 +80,39 @@ else
 fi
 echo ""
 
-# 步骤6：测试提示
-echo -e "${BLUE}📋 步骤6/6: 冷启动恢复测试 ⭐⭐⭐${NC}"
+# 步骤6：禁用电池优化
+echo -e "${YELLOW}🔋 步骤6/7: 禁用电池优化 (关键！)...${NC}"
+adb shell dumpsys deviceidle whitelist +u.nus.edu.astar.demo
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✅ 电池优化已禁用${NC}"
+else
+    echo -e "${YELLOW}⚠️ 需要手动在设置中禁用电池优化${NC}"
+    echo "   设置 > 应用 > LPT > 电池 > 不限制"
+fi
+echo ""
+
+# 步骤7：测试提示
+echo -e "${BLUE}📋 步骤7/7: Swipe 后定位持续测试 ⭐⭐⭐${NC}"
 echo ""
 echo -e "${GREEN}测试顺序：${NC}"
 echo -e "${YELLOW}1. 登录并查看 3 个关键日志${NC}"
 echo "   - [BG] ✅ Forced moving state"
 echo "   - [BG] periodic uploader started"
-echo "   - [BG] upload success"
+echo "   - [BG] ❤️ heartbeat"
 echo ""
-echo -e "${RED}2. Swipe 杀死 App (第一次)${NC}"
-echo "   - 应看到 [HEADLESS] event=boot"
+echo -e "${RED}2. Swipe 杀死 App${NC}"
+echo "   - 等待 3 分钟"
+echo "   - 应看到 [HEADLESS] event=heartbeat 持续触发 ⭐⭐⭐"
 echo "   - [HEADLESS] ✅ upload success"
 echo ""
-echo -e "${YELLOW}3. 等待 10 秒，重新打开 App (第一次)${NC}"
-echo "   - 应看到 [MAIN] Checking cold start state"
-echo "   - [BG][COLD_START] Headless boot event handled recently"
+echo -e "${YELLOW}3. 重新打开 App${NC}"
+echo "   - 应平滑恢复，无报错"
 echo "   - [DHOME] ✅ Location service already running"
-echo "   - 无报错，正常显示界面 ✅"
 echo ""
-echo -e "${RED}4. 再次 Swipe 杀死 (第二次)${NC}"
-echo "   - 重复观察 Headless 上传"
-echo ""
-echo -e "${GREEN}5. 再次打开 (第二次) - 关键测试点！${NC}"
-echo "   - 如果出现报错 -> 说明冲突未解决 ❌"
-echo "   - 正常应该：平滑恢复 + 心跳继续 ✅"
-echo "   - 验证日志："
-echo "     • [BG][COLD_START] Headless boot event handled recently"
-echo "     • [DHOME] ✅ Location service already running"
-echo "     • 无异常错误"
+echo -e "${GREEN}🎯 成功标志：${NC}"
+echo "   1. ⭐ Swipe 后 Headless 持续上传位置（每 60 秒）"
+echo "   2. 重新打开无报错"
+echo "   3. 心跳间隔稳定"
 echo ""
 echo -e "${BLUE}6. 继续测试 (第三次、第四次...)${NC}"
 echo "   - 重复 Swipe + 打开，观察是否持续稳定"

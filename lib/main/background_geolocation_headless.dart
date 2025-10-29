@@ -41,29 +41,50 @@ void backgroundGeolocationHeadlessTask(bg.HeadlessEvent event) async {
   Future<void> _ensureConfig() async {
     try {
       final state = await bg.BackgroundGeolocation.state;
-      // 仅在必要时 setConfig, 避免无谓调用
-      if (state.distanceFilter != 0 || state.heartbeatInterval != 60) {
-        print('[HEADLESS] enforcing config distanceFilter=0 heartbeat=60');
+
+      // ⭐ 修改：检查关键配置项并打印详细信息
+      final needsReconfigure = state.distanceFilter != 0 ||
+          state.heartbeatInterval != 60 ||
+          state.stopTimeout != 0 ||
+          state.disableStopDetection != true;
+
+      if (needsReconfigure) {
+        print('[HEADLESS] ⚠️ Config mismatch detected, enforcing...');
+        print(
+            '[HEADLESS]   distanceFilter: ${state.distanceFilter} (expected: 0)');
+        print(
+            '[HEADLESS]   heartbeatInterval: ${state.heartbeatInterval} (expected: 60)');
+        print('[HEADLESS]   stopTimeout: ${state.stopTimeout} (expected: 0)');
+        print(
+            '[HEADLESS]   disableStopDetection: ${state.disableStopDetection} (expected: true)');
+
         await bg.BackgroundGeolocation.setConfig(bg.Config(
           distanceFilter: 0,
           heartbeatInterval: 60,
           stopTimeout: 0,
           disableStopDetection: true,
+          locationUpdateInterval: 60000,
+          fastestLocationUpdateInterval: 30000,
           stopOnTerminate: false,
           startOnBoot: true,
           foregroundService: true,
           enableHeadless: true,
           desiredAccuracy: bg.Config.DESIRED_ACCURACY_HIGH,
-          locationUpdateInterval: 60000,
-          fastestLocationUpdateInterval: 30000,
           allowIdenticalLocations: true,
+          disableElasticity: true,
           debug: true,
           logLevel: bg.Config.LOG_LEVEL_VERBOSE,
         ));
+
+        print('[HEADLESS] ✅ Config enforced');
+      } else {
+        print('[HEADLESS] ✅ Config is correct');
       }
+
+      // 确保 moving 状态
       if (state.isMoving != true) {
         await bg.BackgroundGeolocation.changePace(true);
-        print('[HEADLESS] forced moving (ensureConfig)');
+        print('[HEADLESS] ✅ Forced moving state');
       }
     } catch (e) {
       print('[HEADLESS] ensureConfig error: $e');

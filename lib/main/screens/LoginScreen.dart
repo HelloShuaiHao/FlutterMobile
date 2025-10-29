@@ -10,6 +10,8 @@ import 'package:mighty_delivery/main/services/VehicleService.dart';
 import 'package:mighty_delivery/main/store/AppStore.dart';
 import 'package:mighty_delivery/main/utils/storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
+    as bg; // ⭐ 新增
 import '../../extensions/extension_util/context_extensions.dart';
 import '../../extensions/extension_util/int_extensions.dart';
 import '../../extensions/extension_util/string_extensions.dart';
@@ -164,6 +166,17 @@ class LoginScreenState extends State<LoginScreen> {
             print('[LOGIN] ✅ Stopped old location service (if any)');
           } catch (e) {
             print('[LOGIN] ⚠️ Failed to stop old service: $e');
+          }
+
+          // ⭐ 新增：请求电池优化豁免（仅提示，需要用户手动设置）
+          try {
+            // 检查当前电池优化状态
+            await bg.BackgroundGeolocation.state;
+            print('[LOGIN] 📋 Battery optimization check: ready');
+            // 注意：实际的电池优化豁免需要用户手动在设置中配置
+            // 设置 > 应用 > LPT > 电池 > 不限制
+          } catch (e) {
+            print('[LOGIN] ⚠️ Battery optimization check failed: $e');
           }
 
           // 取得用户标识 (当前直接使用 access token 作为 identity 占位)

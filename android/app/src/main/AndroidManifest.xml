@@ -14,6 +14,11 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <!-- ⭐ 新增：允许应用保持唤醒状态 -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    
+    <!-- ⭐ 新增：电池优化豁免请求权限 -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <!-- ⭐ 新增：精确闹钟权限（用于 AlarmManager） -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
 
     <!-- 可按需保留，如果 target >= 33 且不再需要外部存储可移除 -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"

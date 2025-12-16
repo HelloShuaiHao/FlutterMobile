@@ -14,6 +14,7 @@ import 'package:mighty_delivery/main/network/http_utils.dart';
 import 'package:mighty_delivery/main/utils/logutil.dart';
 import '../../extensions/extension_util/string_extensions.dart';
 import '../../main/services/OrdersMessageService.dart';
+import 'package:mighty_delivery/main/services/PendingRequestService.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../main/models/models.dart';
 import '../main/screens/SplashScreen.dart';
@@ -74,6 +75,10 @@ void main() async {
 
   await LogUtil.init();
   await GetStorage.init();
+
+  // 初始化待处理请求队列服务
+  await PendingRequestService.instance.initialize();
+
   // 重要
   await HttpUtils.init(unAuthHandle: () {
     // 退出登录

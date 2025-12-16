@@ -14,7 +14,10 @@ import 'package:intl/intl.dart';
 import 'package:mighty_delivery/delivery/screens/EPODScreen.dart';
 
 import 'package:mighty_delivery/main/models/GroupedOrderData.dart';
+import 'package:mighty_delivery/main/models/PendingRequest.dart';
 import 'package:mighty_delivery/main/services/LocationTrackingService.dart';
+import 'package:mighty_delivery/main/services/PendingRequestService.dart';
+import 'package:mighty_delivery/main/screens/PendingRequestsScreen.dart';
 
 import 'package:mighty_delivery/main/services/RoutePlanService.dart';
 import 'package:mighty_delivery/main/utils/storage.dart';
@@ -576,6 +579,48 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
             ).withWidth(30).onTap(() {
               NotificationScreen().launch(context);
             }),
+            // 待处理请求按钮
+            StreamBuilder<List<PendingRequest>>(
+              stream: PendingRequestService.instance.requestsStream,
+              builder: (context, snapshot) {
+                final pendingCount = snapshot.data?.length ?? 0;
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Align(
+                      alignment: AlignmentDirectional.center,
+                      child: Icon(
+                        Ionicons.cloud_upload_outline,
+                        color: Colors.white,
+                      ),
+                    ),
+                    if (pendingCount > 0)
+                      Positioned(
+                        right: 0,
+                        top: 2,
+                        child: Container(
+                          height: 20,
+                          width: 20,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '$pendingCount',
+                            style: primaryTextStyle(
+                              size: pendingCount < 99 ? 12 : 8,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ).withWidth(30).onTap(() {
+                  PendingRequestsScreen().launch(context);
+                });
+              },
+            ),
             IconButton(
               padding: EdgeInsets.only(right: 8),
               onPressed: () async {
@@ -1139,6 +1184,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                               appStore.setLoading(true);
                               final uploadSuccess = await _uploadProofOfDelivery(
                                 taskHeaderId: data.id ?? '',
+                                taskName: data.orderTrackingId ?? 'Unknown',
                                 photoPath: epodResult['photoPath'],
                                 signatureBytes: epodResult['signature'],
                                 notes: '测试上传',
@@ -1153,8 +1199,13 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                 appStore.setLoading(false);
                                 toast('配送确认成功');
                               } else {
+                                // 上传失败，已添加到队列，但仍然更新订单状态
+                                await onTapData(
+                                  orderData: data,
+                                  orderStatus: statusList[selectedStatusIndex],
+                                );
                                 appStore.setLoading(false);
-                                toast('上传失败，请重试');
+                                toast('配送确认成功，照片将在网络恢复后上传');
                               }
                             } else {
                               toast('需要完成拍照和签名才能确认配送');
@@ -1582,6 +1633,51 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
     );
   }
 
+  /// 带队列机制的任务状态更新
+  Future<bool> _addTaskStatusWithQueue({
+    required OrderData orderData,
+    required String statusCode,
+    required String name,
+    required String senderMessage,
+    required String receiverMessage,
+    required List<String> itemIds,
+    List<Map<String, dynamic>>? itemRemarks,
+  }) async {
+    try {
+      final routePlanService = RoutePlanService();
+      await routePlanService.addTaskStatus(
+        taskId: orderData.id!,
+        statusCode: statusCode,
+        name: name,
+        senderMessage: senderMessage,
+        receiverMessage: receiverMessage,
+        colorHex: "#00FF00",
+        itemIds: itemIds,
+        itemRemarks: itemRemarks,
+      );
+      return true;
+    } catch (e) {
+      print('Failed to update task status, adding to queue: $e');
+      // 添加到队列
+      await PendingRequestService.instance.addRequest(
+        type: RequestType.taskStatus,
+        taskId: orderData.id!,
+        taskName: orderData.orderTrackingId ?? 'Unknown',
+        requestData: {
+          'taskId': orderData.id!,
+          'statusCode': statusCode,
+          'name': name,
+          'senderMessage': senderMessage,
+          'receiverMessage': receiverMessage,
+          'colorHex': '#00FF00',
+          'itemIds': itemIds,
+          'itemRemarks': itemRemarks,
+        },
+      );
+      return false;
+    }
+  }
+
   // Pickup all orders in a specific address group
   Future<void> _pickupGroupOrders(GroupedOrderData group) async {
     try {
@@ -1589,6 +1685,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
 
       int successCount = 0;
       int failCount = 0;
+      int queuedCount = 0;
 
       for (var order in group.orders ?? []) {
         try {
@@ -1601,19 +1698,21 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
 
           final itemRemarks = _buildItemRemarks(order);
 
-          final routePlanService = RoutePlanService();
-          await routePlanService.addTaskStatus(
-            taskId: order.id!,
+          final success = await _addTaskStatusWithQueue(
+            orderData: order,
             statusCode: "PickedUp",
             name: "PickedUp",
             senderMessage: "Your order has been assigned",
             receiverMessage: "The order is now assigned to a delivery person",
-            colorHex: "#00FF00",
             itemIds: selectedIds,
             itemRemarks: itemRemarks,
           );
 
-          successCount++;
+          if (success) {
+            successCount++;
+          } else {
+            queuedCount++;
+          }
         } catch (e) {
           print('Failed to pickup order ${order.id}: $e');
           failCount++;
@@ -1622,9 +1721,21 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
 
       appStore.setLoading(false);
 
+      String message = '';
       if (successCount > 0) {
-        toast(
-            'Successfully picked up $successCount order${successCount > 1 ? 's' : ''} at ${group.deliveryOrderId ?? 'this address'}${failCount > 0 ? ', $failCount failed' : ''}');
+        message += 'Successfully picked up $successCount order${successCount > 1 ? 's' : ''}';
+      }
+      if (queuedCount > 0) {
+        if (message.isNotEmpty) message += ', ';
+        message += '$queuedCount added to queue';
+      }
+      if (failCount > 0) {
+        if (message.isNotEmpty) message += ', ';
+        message += '$failCount failed';
+      }
+
+      if (successCount > 0 || queuedCount > 0) {
+        toast(message);
         await getOrderListApiCall();
       } else {
         toast('Failed to pickup orders');
@@ -1637,7 +1748,6 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
 
   Future<void> onTapData(
       {required String orderStatus, required OrderData orderData}) async {
-    final routePlanService = RoutePlanService();
     // var enumStatusCode = convertStatusToEnum(orderStatus);
     if (orderStatus == ORDER_ASSIGNED) {
       FlutterRingtonePlayer().stop();
@@ -1649,20 +1759,19 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
 
       final itemRemarks = _buildItemRemarks(orderData);
 
-      await routePlanService.addTaskStatus(
-        taskId: orderData.id!,
+      final success = await _addTaskStatusWithQueue(
+        orderData: orderData,
         statusCode: "PickedUp",
         name: "PickedUp",
         senderMessage: "Your order has been assigned",
         receiverMessage: "The order is now assigned to a delivery person",
-        colorHex: "#00FF00",
         itemIds: selectedIds,
         itemRemarks: itemRemarks,
       );
 
-      // 不进行跳转
-      // int i = statusList.indexWhere((item) => item == ORDER_ASSIGNED);
-      // pageController.jumpToPage(i + 1);
+      if (!success) {
+        toast('网络异常，任务已加入待处理队列');
+      }
 
       getOrderListApiCall();
     } else if (orderStatus == ORDER_ACCEPTED) {
@@ -1709,16 +1818,19 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
       ]..removeWhere((id) => id.isEmpty);
       final itemRemarks = _buildItemRemarks(orderData);
 
-      await routePlanService.addTaskStatus(
-        taskId: orderData.id!,
+      final success = await _addTaskStatusWithQueue(
+        orderData: orderData,
         statusCode: "Delivered",
         name: "Delivered",
         senderMessage: "Your order has been delivered",
         receiverMessage: "The order is now completed",
-        colorHex: "#00FF00",
         itemIds: selectedItemIds,
         itemRemarks: itemRemarks,
       );
+
+      if (!success) {
+        toast('网络异常，任务已加入待处理队列');
+      }
 
       getOrderListApiCall();
     } else if (orderStatus == ORDER_DEPARTED) {
@@ -1759,6 +1871,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
 
   Future<bool> _uploadProofOfDelivery({
     required String taskHeaderId,
+    required String taskName,
     required String photoPath,
     required Uint8List signatureBytes,
     String notes = '',
@@ -1792,23 +1905,54 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
         '/api/delivery/proof-of-delivery/upload',
         formData: formData,
         loadingDialog: false,
-        showErrorTip: true,
+        showErrorTip: false, // 不显示错误提示，由队列机制处理
       );
-
-      // 4. 清理临时签名文件
-      try {
-        await signatureFile.delete();
-      } catch (_) {}
 
       if (response.code == 0) {
         print('Proof of delivery uploaded successfully');
+        // 上传成功后删除临时签名文件
+        try {
+          await signatureFile.delete();
+        } catch (_) {}
         return true;
       } else {
-        print('Upload failed: ${response.msg}');
+        // 上传失败，添加到队列
+        print('Upload failed, adding to pending queue');
+        await PendingRequestService.instance.addRequest(
+          type: RequestType.proofOfDelivery,
+          taskId: taskHeaderId,
+          taskName: taskName,
+          requestData: {
+            'taskHeaderId': taskHeaderId,
+            'notes': notes,
+            'photoType': photoType,
+            'photoDescription': photoDescription,
+          },
+          photoPath: photoPath,
+          signaturePath: signatureFile.path,
+        );
         return false;
       }
     } catch (e) {
       print('Error uploading proof of delivery: $e');
+      // 发生异常，添加到队列
+      final tempDir = await getTemporaryDirectory();
+      final signatureFile = File('${tempDir.path}/signature_${DateTime.now().millisecondsSinceEpoch}.png');
+      await signatureFile.writeAsBytes(signatureBytes);
+
+      await PendingRequestService.instance.addRequest(
+        type: RequestType.proofOfDelivery,
+        taskId: taskHeaderId,
+        taskName: taskName,
+        requestData: {
+          'taskHeaderId': taskHeaderId,
+          'notes': notes,
+          'photoType': photoType,
+          'photoDescription': photoDescription,
+        },
+        photoPath: photoPath,
+        signaturePath: signatureFile.path,
+      );
       return false;
     }
   }

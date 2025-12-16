@@ -1,7 +1,11 @@
 import 'package:gallery_saver/gallery_saver.dart';
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
@@ -38,6 +42,7 @@ import '../../main.dart';
 import '../../main/components/CommonScaffoldComponent.dart';
 import '../../main/models/OrderListModel.dart';
 import '../../main/network/RestApis.dart';
+import '../../main/network/http_utils.dart';
 import '../../main/screens/NotificationScreen.dart';
 import '../../main/utils/Common.dart';
 import '../../main/utils/Constants.dart';
@@ -1125,16 +1130,32 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                             if (epodResult != null) {
                               print('拍照路径: ${epodResult['photoPath']}');
                               print('签名数据: ${epodResult['signature']}');
+
+                              // 保存到相册
                               await GallerySaver.saveImage(
                                   epodResult['photoPath']);
-                              // 这里应该加 loading
-                              appStore.setLoading(true); // 新增：签名完成后显示 loading
-                              await onTapData(
-                                orderData: data,
-                                orderStatus: statusList[selectedStatusIndex],
+
+                              // 上传到服务器
+                              appStore.setLoading(true);
+                              final uploadSuccess = await _uploadProofOfDelivery(
+                                taskHeaderId: data.id ?? '',
+                                photoPath: epodResult['photoPath'],
+                                signatureBytes: epodResult['signature'],
+                                notes: '测试上传',
                               );
-                              appStore.setLoading(false); // 新增：操作完成后隐藏 loading
-                              toast('配送确认成功');
+
+                              if (uploadSuccess) {
+                                // 上传成功后更新订单状态
+                                await onTapData(
+                                  orderData: data,
+                                  orderStatus: statusList[selectedStatusIndex],
+                                );
+                                appStore.setLoading(false);
+                                toast('配送确认成功');
+                              } else {
+                                appStore.setLoading(false);
+                                toast('上传失败，请重试');
+                              }
                             } else {
                               toast('需要完成拍照和签名才能确认配送');
                             }
@@ -1734,6 +1755,62 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
       return language.confirmDelivery;
     }
     return '';
+  }
+
+  Future<bool> _uploadProofOfDelivery({
+    required String taskHeaderId,
+    required String photoPath,
+    required Uint8List signatureBytes,
+    String notes = '',
+    String photoType = '1',
+    String photoDescription = '现场照片',
+  }) async {
+    try {
+      // 1. 将签名保存为临时文件
+      final tempDir = await getTemporaryDirectory();
+      final signatureFile = File('${tempDir.path}/signature_${DateTime.now().millisecondsSinceEpoch}.png');
+      await signatureFile.writeAsBytes(signatureBytes);
+
+      // 2. 创建 FormData
+      FormData formData = FormData.fromMap({
+        'TaskHeaderId': taskHeaderId,
+        'SignatureFile': await MultipartFile.fromFile(
+          signatureFile.path,
+          filename: 'signature.png',
+        ),
+        'Notes': notes,
+        'Photos[0].PhotoFile': await MultipartFile.fromFile(
+          photoPath,
+          filename: 'photo.jpg',
+        ),
+        'Photos[0].PhotoType': photoType,
+        'Photos[0].Description': photoDescription,
+      });
+
+      // 3. 调用上传 API
+      final response = await HttpUtils.uploadMultipart(
+        '/api/delivery/proof-of-delivery/upload',
+        formData: formData,
+        loadingDialog: false,
+        showErrorTip: true,
+      );
+
+      // 4. 清理临时签名文件
+      try {
+        await signatureFile.delete();
+      } catch (_) {}
+
+      if (response.code == 0) {
+        print('Proof of delivery uploaded successfully');
+        return true;
+      } else {
+        print('Upload failed: ${response.msg}');
+        return false;
+      }
+    } catch (e) {
+      print('Error uploading proof of delivery: $e');
+      return false;
+    }
   }
 
   Future<({double lat, double lng})?> _getCurrentLatLng() async {

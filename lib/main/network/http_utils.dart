@@ -343,6 +343,43 @@ class HttpUtils {
     },
   );
 
+  /// 文件上传（multipart/form-data）
+  static Future<ResponseEntity<T>> uploadMultipart<T>(
+    String path, {
+    required FormData formData,
+    Options? options,
+    bool loadingDialog = false,
+    bool showErrorTip = true,
+    ProgressCallback? onSendProgress,
+  }) async {
+    if (loadingDialog) {
+      showLoading();
+    }
+    try {
+      var response = await dio.post(
+        path,
+        data: formData,
+        options: options,
+        onSendProgress: onSendProgress,
+      );
+
+      Map<String, dynamic> wrappedData = {
+        'code': 0,
+        'msg': 'success',
+        'data': response.data,
+      };
+
+      return ResponseEntity<T>.fromJson(wrappedData);
+    } catch (e) {
+      if (showErrorTip) {
+        showError('上传失败');
+      }
+      return ResponseEntity<T>.fromJson({'code': 500});
+    } finally {
+      if (loadingDialog) dismissLoading();
+    }
+  }
+
   // ignore: unused_element
   static Future<void> _dump401Token({
     required String phase,

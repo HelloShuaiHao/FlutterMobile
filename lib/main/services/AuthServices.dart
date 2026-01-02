@@ -257,6 +257,16 @@ class AuthServices {
     }
   }
 
+  // 获取当前登录用户的信息
+  Future<Map<String, dynamic>?> getUserInfo() async {
+    try {
+      return await _myAuth.getUserInfo();
+    } catch (e) {
+      log('Failed to get user info: ${e.toString()}');
+      return null;
+    }
+  }
+
   Future<void> loginFromFirebaseUser(User currentUser,
       {LoginResponse? loginDetail,
       String? fullName,

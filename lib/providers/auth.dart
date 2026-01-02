@@ -106,4 +106,31 @@ class MyAuthProvider with ChangeNotifier {
       };
     }
   }
+
+  /// 获取当前登录用户的信息
+  Future<Map<String, dynamic>?> getUserInfo() async {
+    try {
+      if (token == null || token!.isEmpty) {
+        _logger.warning('Cannot get user info: token is null or empty');
+        return null;
+      }
+
+      // 调用获取用户信息的 API（假设使用 /api/app/profile 或类似的端点）
+      final baseUrl = SpUtil.baseUrl.val;
+      final response = await HttpUtils.get(
+        '$baseUrl/app/profile',
+      );
+
+      if (response.code == 0 && response.data != null) {
+        print('[Auth] User info retrieved successfully');
+        return response.data as Map<String, dynamic>;
+      } else {
+        _logger.warning('Failed to get user info: ${response.msg}');
+        return null;
+      }
+    } catch (error) {
+      _logger.severe('Get user info failed: $error');
+      return null;
+    }
+  }
 }

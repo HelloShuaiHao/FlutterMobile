@@ -141,6 +141,46 @@ class LoginScreenState extends State<LoginScreen> {
             } catch (e) {
               print('[LOGIN] ⚠️ Failed to save token to SharedPreferences: $e');
             }
+
+            // ⭐ 新增：获取并保存用户信息
+            try {
+              final userInfo = await authService.getUserInfo();
+              if (userInfo != null) {
+                // 保存用户信息到 SharedPreferences
+                await setValue(USER_ID, userInfo['id'] ?? 0);
+                await setValue(NAME, userInfo['name'] ?? '');
+                await setValue(
+                    USER_EMAIL, userInfo['email'] ?? emailController.text);
+                await setValue(USER_NAME, userInfo['userName'] ?? '');
+                await setValue(
+                    USER_CONTACT_NUMBER, userInfo['phoneNumber'] ?? '');
+                await setValue(USER_TYPE, userInfo['userType'] ?? CLIENT);
+                await setValue(USER_ADDRESS, userInfo['address'] ?? '');
+                await setValue(STATUS, userInfo['status'] ?? 1);
+
+                // 更新 appStore
+                appStore
+                    .setUserEmail(userInfo['email'] ?? emailController.text);
+                appStore.setUserProfile(userInfo['profileImage'] ?? '');
+
+                print(
+                    '[LOGIN] ✅ User info saved: name=${userInfo['name']}, email=${userInfo['email']}');
+              } else {
+                print(
+                    '[LOGIN] ⚠️ Failed to get user info, using email from login form');
+                // 如果获取失败，至少保存邮箱
+                await setValue(USER_EMAIL, emailController.text);
+                await setValue(
+                    NAME, emailController.text.split('@')[0]); // 使用邮箱前缀作为临时名称
+                appStore.setUserEmail(emailController.text);
+              }
+            } catch (e) {
+              print('[LOGIN] ⚠️ Error saving user info: $e');
+              // 出错时也至少保存邮箱
+              await setValue(USER_EMAIL, emailController.text);
+              await setValue(NAME, emailController.text.split('@')[0]);
+              appStore.setUserEmail(emailController.text);
+            }
           }
 
           // ⭐ 新增：读取已选择的 vehicleId 并同步到 SharedPreferences

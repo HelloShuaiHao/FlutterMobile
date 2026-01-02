@@ -188,20 +188,21 @@ Future<void> logout(BuildContext context,
     await removeKey(FILTER_DATA);
     await removeKey(IS_VERIFIED_DELIVERY_MAN);
     await removeKey(OTP_VERIFIED);
-    // if (!getBoolAsync(REMEMBER_ME)) {
-    //   await removeKey(USER_EMAIL);
-    //   await removeKey(USER_PASSWORD);
-    // }
-    // if (getStringAsync(LOGIN_TYPE) == LoginTypeGoogle) {
-    //   await removeKey(USER_EMAIL);
-    //   await removeKey(USER_PASSWORD);
-    //   await removeKey(LOGIN_TYPE);
-    //   await removeKey(REMEMBER_ME);
-    // }
+    await removeKey(EMAIL_VERIFIED);
+    await removeKey(UID);
+    await removeKey(LOGIN_TYPE);
+
+    // 清除密码（除非勾选了"记住我"）
+    // 注意：USER_EMAIL 不在这里清除，因为需要在登录时重新设置
+    if (!getBoolAsync(REMEMBER_ME)) {
+      await removeKey(USER_EMAIL);
+      await removeKey(USER_PASSWORD);
+    }
 
     await appStore.setLogin(false);
     appStore.setFiltering(false);
     appStore.setUserProfile('');
+    appStore.setUserEmail('');
     if (isFromLogin) {
       // toast(language.credentialNotMatch); comment this because show popup before logout
     } else {

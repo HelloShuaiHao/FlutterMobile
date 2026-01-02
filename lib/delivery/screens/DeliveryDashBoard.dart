@@ -230,10 +230,13 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
     for (var item in taskItems) {
       final itemName = item['name']?.toString() ?? 'Unknown Item';
       final itemId = item['id']?.toString() ?? '';
+      final quantity =
+          (item['quantity'] as num?)?.toInt() ?? 1; // 使用后台返回的 quantity 字段
 
       if (itemMap.containsKey(itemName)) {
-        // 相同名称的物品，增加数量
-        itemMap[itemName]!['count'] = (itemMap[itemName]!['count'] as int) + 1;
+        // 相同名称的物品，累加数量
+        itemMap[itemName]!['count'] =
+            (itemMap[itemName]!['count'] as int) + quantity;
         // 保存所有相同物品的ID和索引
         (itemMap[itemName]!['indices'] as List<int>)
             .add(taskItems.indexOf(item));
@@ -242,7 +245,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
         // 新物品
         itemMap[itemName] = {
           'name': itemName,
-          'count': 1,
+          'count': quantity, // 使用 quantity 字段作为初始数量
           'item': item, // 保存第一个物品的完整信息
           'indices': [taskItems.indexOf(item)], // 保存所有索引
           'ids': [itemId], // 保存所有ID
@@ -676,7 +679,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                                       (o) => o.taskItems ?? [])
                                                   .toList();
 
-                                              // 按名称分组统计数量
+                                              // 按名称分组统计数量 (使用 quantity 字段)
                                               final Map<String, int>
                                                   nameCountMap = {};
                                               for (var taskItem
@@ -685,10 +688,14 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                                     taskItem['name']
                                                             ?.toString() ??
                                                         'Unknown Item';
+                                                final quantity = (taskItem[
+                                                            'quantity'] as num?)
+                                                        ?.toInt() ??
+                                                    1; // 使用后台返回的 quantity 字段
                                                 nameCountMap[itemName] =
                                                     (nameCountMap[itemName] ??
                                                             0) +
-                                                        1;
+                                                        quantity;
                                               }
 
                                               // 排序

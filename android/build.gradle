@@ -7,6 +7,12 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        
+        // 国内镜像源（备用）
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        maven { url 'https://mirrors.tencent.com/nexus/repository/maven-public/' }
 
         // added by shuai
         maven { url "https://jitpack.io" }

@@ -192,6 +192,9 @@ Future<void> logout(BuildContext context,
     await removeKey(UID);
     await removeKey(LOGIN_TYPE);
 
+    // 清除 vehicleId（重要：防止登出后继续上传位置）
+    SpUtil.remove("vehicleId");
+
     // 清除密码（除非勾选了"记住我"）
     // 注意：USER_EMAIL 不在这里清除，因为需要在登录时重新设置
     if (!getBoolAsync(REMEMBER_ME)) {

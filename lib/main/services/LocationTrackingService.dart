@@ -29,16 +29,12 @@ class LocationTrackingService {
   Stream<bg.Location> get locationStream => _locationStreamController.stream;
 
   Future<void> startTracking({
-    required String identityUserId,
+    String identityUserId = '', // 可以为空，上传时检查 vehicleId
     String? bearerToken,
   }) async {
     print(
         '[BG] startTracking(identity=$identityUserId) configured=$_configured started=$_started lock=${_startingLock != null}');
     _cachedIdentityUserId = identityUserId; // cache for timer fallback
-    // Quick sanity: if identity empty, log warning
-    if (identityUserId.isEmpty) {
-      print('[BG][WARN] empty identityUserId passed to startTracking');
-    }
     // Restore fast path
     if (_configured && _started) {
       try {
@@ -366,12 +362,15 @@ class LocationTrackingService {
 
   Future<void> _tryUpload({
     bool force = false,
-    required String identityUserId,
+    String identityUserId = '',
   }) async {
-    if (identityUserId.isEmpty) {
-      print('[BG] identityUserId empty -> skip upload');
+    // 检查 vehicleId 是否存在，没有则跳过上传
+    final vehicleId = SpUtil.getJSON("vehicleId");
+    if (vehicleId == null || vehicleId.toString().isEmpty) {
+      print('[BG] vehicleId missing in storage -> skip upload');
       return;
     }
+
     final now = DateTime.now();
     if (!force &&
         _lastUploadAt != null &&
@@ -388,21 +387,11 @@ class LocationTrackingService {
     _lastUploadAt = now;
     print('[BG] uploading...');
     try {
-      // 读取登录/选择车辆时保存的 vehicleId
-      final vehicleId = SpUtil.getJSON("vehicleId");
-      if (vehicleId == null || vehicleId.toString().isEmpty) {
-        print(
-            '[BG] warning: vehicleId missing in storage, will upload without it');
-      }
       final r = await HttpUtils.postJson('/api/mobile/locations/create', data: {
-        // 按照 Postman 成功示例，仅携带 address / VehicleId / latitude / longitude
         'address': 'location.',
-        'VehicleId': vehicleId, // 后端示例使用首字母大写
+        'VehicleId': vehicleId,
         'latitude': loc.coords.latitude,
         'longitude': loc.coords.longitude,
-        // 如果后端以后需要再加 identityUserId / timeStamp，再放开：
-        // 'identityUserId': someGuid,
-        // 'timeStamp': loc.timestamp.toIso8601String(),
       });
       if (r.code == 0) {
         print('[BG] upload success ${now.toIso8601String()}');

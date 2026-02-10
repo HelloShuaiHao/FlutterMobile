@@ -117,15 +117,21 @@ void main() async {
       backgroundGeolocationHeadlessTask);
   print('[MAIN] ✅ Headless task registered');
 
-  // ⭐ 修改：延迟冷启动检测，避免与 Headless boot 事件冲突
+  // ⭐ 启动时无条件启动位置追踪（如果有 vehicleId 才会上传）
   WidgetsBinding.instance.addPostFrameCallback((_) async {
     // 等待 1 秒，让 Headless boot 事件完成处理
     await Future.delayed(const Duration(seconds: 1));
     try {
-      print('[MAIN] Checking cold start state after delay...');
+      print('[MAIN] Starting location tracking on app launch...');
+      // 先检查冷启动恢复
       await LocationTrackingService.instance.ensureColdStartInit();
+      // 无条件启动追踪（内部会检查 vehicleId 决定是否上传）
+      await LocationTrackingService.instance.startTracking(
+        identityUserId: '', // 可以为空，上传时会检查 vehicleId
+      );
+      print('[MAIN] ✅ Location tracking started on app launch');
     } catch (e) {
-      print('[MAIN] ensureColdStartInit error: $e');
+      print('[MAIN] Location tracking start error: $e');
     }
   });
 

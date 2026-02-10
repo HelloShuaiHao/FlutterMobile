@@ -1338,6 +1338,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                         final item = mergedItem['item'] as Map<String, dynamic>;
                         final indices = mergedItem['indices'] as List<int>;
                         final ids = mergedItem['ids'] as List<String>;
+                        final uomName = item['uomName']?.toString() ?? '';
 
                         final isGroupSelected = _isGroupSelected(data, indices);
                         final isGroupPartial =
@@ -1452,12 +1453,12 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                               SizedBox(width: 8),
                               // 数量（右侧，固定宽度，与checkbox对齐）
                               Container(
-                                width: 40,
-                                alignment: Alignment.center,
+                                width: 60,
+                                alignment: Alignment.centerRight,
                                 child: Text(
-                                  'x$itemCount',
+                                  'x$itemCount${uomName.isNotEmpty ? ' $uomName' : ''}',
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                     color: ColorUtils.colorPrimary,
                                   ),

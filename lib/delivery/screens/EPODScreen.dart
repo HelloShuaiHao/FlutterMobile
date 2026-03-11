@@ -5,6 +5,7 @@ import 'package:mighty_delivery/extensions/extension_util/widget_extensions.dart
 import 'package:signature/signature.dart';
 import 'CameraScreen.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../../main.dart';
 
 class EPODScreen extends StatefulWidget {
   const EPODScreen({Key? key}) : super(key: key);
@@ -21,7 +22,7 @@ class _EPODScreenState extends State<EPODScreen> {
     exportBackgroundColor: Colors.white,
   );
 
-  int step = 1; // 1: 拍照, 2: 签名
+  int step = 1; // 1: Take photo, 2: Sign
 
   @override
   void dispose() {
@@ -75,7 +76,7 @@ class _EPODScreenState extends State<EPODScreen> {
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请先签名')),
+        SnackBar(content: Text(language.pleaseSignFirst)),
       );
     }
   }
@@ -83,12 +84,12 @@ class _EPODScreenState extends State<EPODScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('电子签收（EPOD）')),
+      appBar: AppBar(title: Text(language.epodTitle)),
       body: step == 1
           ? Center(
               child: ElevatedButton(
                 onPressed: _takePhoto,
-                child: const Text('拍照'),
+                child: Text(language.takePhoto),
               ),
             )
           : Column(
@@ -99,7 +100,7 @@ class _EPODScreenState extends State<EPODScreen> {
                     height: 200,
                   ),
                 const SizedBox(height: 16),
-                const Text('请签名：'),
+                Text(language.pleaseSign),
                 Container(
                   color: Colors.grey[200],
                   child: Signature(
@@ -112,12 +113,12 @@ class _EPODScreenState extends State<EPODScreen> {
                   children: [
                     TextButton(
                       onPressed: () => _signatureController.clear(),
-                      child: const Text('重签'),
+                      child: Text(language.reSign),
                     ),
                     const Spacer(),
                     ElevatedButton(
                       onPressed: _submit,
-                      child: const Text('完成'),
+                      child: Text(language.done),
                     ),
                   ],
                 ).paddingAll(16),

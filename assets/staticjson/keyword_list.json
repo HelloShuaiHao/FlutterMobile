@@ -7,7 +7,10 @@
         "screenId": "1",
         "keyword_id": 1,
         "keyword_name": "skip",
-        "keyword_value": "Skip"
+        "keyword_value": {
+          "en": "Skip",
+          "zh": "跳过"
+        }
       },
       {
         "screenId": "1",
@@ -187,13 +190,19 @@
         "screenId": "3",
         "keyword_id": 29,
         "keyword_name": "cancel",
-        "keyword_value": "Cancel"
+        "keyword_value": {
+          "en": "Cancel",
+          "zh": "取消"
+        }
       },
       {
         "screenId": "3",
         "keyword_id": 30,
         "keyword_name": "lblContinue",
-        "keyword_value": "Continue"
+        "keyword_value": {
+          "en": "Continue",
+          "zh": "继续"
+        }
       },
       {
         "screenId": "3",
@@ -355,7 +364,10 @@
         "screenId": "6",
         "keyword_id": 38,
         "keyword_name": "submit",
-        "keyword_value": "Submit"
+        "keyword_value": {
+          "en": "Submit",
+          "zh": "提交"
+        }
       },
       {
         "screenId": "6",
@@ -433,7 +445,10 @@
         "screenId": "8",
         "keyword_id": 48,
         "keyword_name": "save",
-        "keyword_value": "Save"
+        "keyword_value": {
+          "en": "Save",
+          "zh": "保存"
+        }
       },
       {
         "screenId": "8",
@@ -547,13 +562,19 @@
         "screenId": "11",
         "keyword_id": 62,
         "keyword_name": "yes",
-        "keyword_value": "Yes"
+        "keyword_value": {
+          "en": "Yes",
+          "zh": "是"
+        }
       },
       {
         "screenId": "11",
         "keyword_id": 63,
         "keyword_name": "no",
-        "keyword_value": "No"
+        "keyword_value": {
+          "en": "No",
+          "zh": "否"
+        }
       },
       {
         "screenId": "11",
@@ -955,13 +976,19 @@
         "screenId": "19",
         "keyword_id": 125,
         "keyword_name": "previous",
-        "keyword_value": "Previous"
+        "keyword_value": {
+          "en": "Previous",
+          "zh": "上一步"
+        }
       },
       {
         "screenId": "19",
         "keyword_id": 126,
         "keyword_name": "next",
-        "keyword_value": "Next"
+        "keyword_value": {
+          "en": "Next",
+          "zh": "下一步"
+        }
       },
       {
         "screenId": "19",
@@ -1051,7 +1078,10 @@
         "screenId": "19",
         "keyword_id": 285,
         "keyword_name": "create",
-        "keyword_value": "Create"
+        "keyword_value": {
+          "en": "Create",
+          "zh": "创建"
+        }
       },
       {
         "screenId": "19",
@@ -1075,7 +1105,10 @@
         "screenId": "19",
         "keyword_id": 341,
         "keyword_name": "ok",
-        "keyword_value": "OK"
+        "keyword_value": {
+          "en": "OK",
+          "zh": "确定"
+        }
       },
       {
         "screenId": "19",
@@ -1267,13 +1300,19 @@
         "screenId": "20",
         "keyword_id": 286,
         "keyword_name": "filter",
-        "keyword_value": "Filter "
+        "keyword_value": {
+          "en": "Filter",
+          "zh": "筛选"
+        }
       },
       {
         "screenId": "20",
         "keyword_id": 287,
         "keyword_name": "reset",
-        "keyword_value": "Reset "
+        "keyword_value": {
+          "en": "Reset",
+          "zh": "重置"
+        }
       },
       {
         "screenId": "20",
@@ -1363,7 +1402,10 @@
         "screenId": "21",
         "keyword_id": 151,
         "keyword_name": "logout",
-        "keyword_value": "Logout"
+        "keyword_value": {
+          "en": "Logout",
+          "zh": "登出"
+        }
       },
       {
         "screenId": "21",
@@ -1393,7 +1435,10 @@
         "screenId": "21",
         "keyword_id": 518,
         "keyword_name": "update",
-        "keyword_value": "update"
+        "keyword_value": {
+          "en": "Update",
+          "zh": "更新"
+        }
       }
     ]
   },
@@ -1435,7 +1480,10 @@
         "screenId": "23",
         "keyword_id": 157,
         "keyword_name": "delete",
-        "keyword_value": "Delete"
+        "keyword_value": {
+          "en": "Delete",
+          "zh": "删除"
+        }
       },
       {
         "screenId": "23",
@@ -2086,7 +2134,10 @@
         "screenId": "32",
         "keyword_id": 226,
         "keyword_name": "add",
-        "keyword_value": "Add"
+        "keyword_value": {
+          "en": "Add",
+          "zh": "添加"
+        }
       },
       {
         "screenId": "32",
@@ -2530,7 +2581,10 @@
         "screenId": "35",
         "keyword_id": 256,
         "keyword_name": "clear",
-        "keyword_value": "Clear"
+        "keyword_value": {
+          "en": "Clear",
+          "zh": "清除"
+        }
       },
       {
         "screenId": "35",
@@ -3004,7 +3058,10 @@
         "screenId": "41",
         "keyword_id": 366,
         "keyword_name": "apply",
-        "keyword_value": "Apply"
+        "keyword_value": {
+          "en": "Apply",
+          "zh": "应用"
+        }
       },
       {
         "screenId": "41",
@@ -3391,7 +3448,10 @@
         "screenId": "50",
         "keyword_id": 440,
         "keyword_name": "select",
-        "keyword_value": "Select"
+        "keyword_value": {
+          "en": "Select",
+          "zh": "选择"
+        }
       },
       {
         "screenId": "50",
@@ -3925,7 +3985,10 @@
         "screenId": "57",
         "keyword_id": 575,
         "keyword_name": "confirm",
-        "keyword_value": "Confirm"
+        "keyword_value": {
+          "en": "Confirm",
+          "zh": "确认"
+        }
       },
       {
         "screenId": "57",
@@ -4003,7 +4066,10 @@
         "screenId": "57",
         "keyword_id": 588,
         "keyword_name": "close",
-        "keyword_value": "Close"
+        "keyword_value": {
+          "en": "Close",
+          "zh": "关闭"
+        }
       },
       {
         "screenId": "57",
@@ -4106,6 +4172,270 @@
         "keyword_id": 609,
         "keyword_name": "couponApplied",
         "keyword_value": "Coupon Applied"
+      }
+    ]
+  },
+  {
+    "screenID": "59",
+    "ScreenName": "DeliveryDashBoard",
+    "keyword_data": [
+      {
+        "screenId": "59",
+        "keyword_id": 10400,
+        "keyword_name": "pickupAll",
+        "keyword_value": {
+          "en": "Pickup All",
+          "zh": "全部取件"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10401,
+        "keyword_name": "pickupAllOrdersAtThisAddress",
+        "keyword_value": {
+          "en": "Pickup All Orders at This Address?",
+          "zh": "取件此地址的所有订单？"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10402,
+        "keyword_name": "thisWillPickupAllOrders",
+        "keyword_value": {
+          "en": "This will pickup all {count} orders at {address}.",
+          "zh": "这将取件 {address} 的所有 {count} 个订单。"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10403,
+        "keyword_name": "itemList",
+        "keyword_value": {
+          "en": "Item List",
+          "zh": "物品清单"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10404,
+        "keyword_name": "cancellationReason",
+        "keyword_value": {
+          "en": "Cancellation Reason",
+          "zh": "取消原因"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10405,
+        "keyword_name": "selectReason",
+        "keyword_value": {
+          "en": "Select reason",
+          "zh": "选择原因"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10406,
+        "keyword_name": "customReason",
+        "keyword_value": {
+          "en": "Custom reason *",
+          "zh": "自定义原因 *"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10407,
+        "keyword_name": "pleaseProvideDetailedReason",
+        "keyword_value": {
+          "en": "Please provide detailed reason",
+          "zh": "请提供详细原因"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10408,
+        "keyword_name": "requiredField",
+        "keyword_value": {
+          "en": "* Required field",
+          "zh": "* 必填项"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10409,
+        "keyword_name": "pleaseEnterDetailedReason",
+        "keyword_value": {
+          "en": "Please enter a detailed reason",
+          "zh": "请输入详细原因"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10410,
+        "keyword_name": "item",
+        "keyword_value": {
+          "en": "Item",
+          "zh": "物品"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10411,
+        "keyword_name": "customerCancelled",
+        "keyword_value": {
+          "en": "Customer cancelled",
+          "zh": "客户取消"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10412,
+        "keyword_name": "damagedItem",
+        "keyword_value": {
+          "en": "Damaged item",
+          "zh": "物品损坏"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10413,
+        "keyword_name": "outOfStock",
+        "keyword_value": {
+          "en": "Out of stock",
+          "zh": "缺货"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10414,
+        "keyword_name": "wrongItemPrepared",
+        "keyword_value": {
+          "en": "Wrong item prepared",
+          "zh": "准备错误物品"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10415,
+        "keyword_name": "addressIssue",
+        "keyword_value": {
+          "en": "Address issue",
+          "zh": "地址问题"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10416,
+        "keyword_name": "noTasksForThisDate",
+        "keyword_value": {
+          "en": "No tasks for this date",
+          "zh": "此日期没有任务"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10417,
+        "keyword_name": "noTasks",
+        "keyword_value": {
+          "en": "No tasks",
+          "zh": "没有任务"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10424,
+        "keyword_name": "deliveryConfirmedSuccessfully",
+        "keyword_value": {
+          "en": "Delivery confirmed successfully",
+          "zh": "配送确认成功"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10425,
+        "keyword_name": "needPhotoAndSignature",
+        "keyword_value": {
+          "en": "Photo and signature are required to confirm delivery",
+          "zh": "需要完成拍照和签名才能确认配送"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10426,
+        "keyword_name": "currentLocationUnavailable",
+        "keyword_value": {
+          "en": "Current location unavailable, please try again later",
+          "zh": "当前位置不可用，请稍后再试"
+        }
+      },
+      {
+        "screenId": "59",
+        "keyword_id": 10427,
+        "keyword_name": "cannotOpenNavigation",
+        "keyword_value": {
+          "en": "Cannot open navigation app",
+          "zh": "无法打开导航应用"
+        }
+      }
+    ]
+  },
+  {
+    "screenID": "60",
+    "ScreenName": "EPODScreen",
+    "keyword_data": [
+      {
+        "screenId": "60",
+        "keyword_id": 10418,
+        "keyword_name": "epodTitle",
+        "keyword_value": {
+          "en": "Electronic Proof of Delivery (EPOD)",
+          "zh": "电子签收（EPOD）"
+        }
+      },
+      {
+        "screenId": "60",
+        "keyword_id": 10419,
+        "keyword_name": "takePhoto",
+        "keyword_value": {
+          "en": "Take Photo",
+          "zh": "拍照"
+        }
+      },
+      {
+        "screenId": "60",
+        "keyword_id": 10420,
+        "keyword_name": "pleaseSign",
+        "keyword_value": {
+          "en": "Please sign:",
+          "zh": "请签名："
+        }
+      },
+      {
+        "screenId": "60",
+        "keyword_id": 10421,
+        "keyword_name": "reSign",
+        "keyword_value": {
+          "en": "Re-sign",
+          "zh": "重签"
+        }
+      },
+      {
+        "screenId": "60",
+        "keyword_id": 10422,
+        "keyword_name": "done",
+        "keyword_value": {
+          "en": "Done",
+          "zh": "完成"
+        }
+      },
+      {
+        "screenId": "60",
+        "keyword_id": 10423,
+        "keyword_name": "pleaseSignFirst",
+        "keyword_value": {
+          "en": "Please sign first",
+          "zh": "请先签名"
+        }
       }
     ]
   }

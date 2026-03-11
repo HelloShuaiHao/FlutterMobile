@@ -1223,4 +1223,60 @@ class BaseLanguage {
   String get totalAmount => getContentValueFromKey(596);
 
   String get youPlaced => getContentValueFromKey(597);
+
+  // DeliveryDashBoard translations
+  String get pickupAll => getContentValueFromKey(10400);
+
+  String get pickupAllOrdersAtThisAddress => getContentValueFromKey(10401);
+
+  String get thisWillPickupAllOrders => getContentValueFromKey(10402);
+
+  String get itemList => getContentValueFromKey(10403);
+
+  String get cancellationReason => getContentValueFromKey(10404);
+
+  String get selectReason => getContentValueFromKey(10405);
+
+  String get customReason => getContentValueFromKey(10406);
+
+  String get pleaseProvideDetailedReason => getContentValueFromKey(10407);
+
+  String get requiredField => getContentValueFromKey(10408);
+
+  String get pleaseEnterDetailedReason => getContentValueFromKey(10409);
+
+  String get customerCancelled => getContentValueFromKey(10411);
+
+  String get damagedItem => getContentValueFromKey(10412);
+
+  String get outOfStock => getContentValueFromKey(10413);
+
+  String get wrongItemPrepared => getContentValueFromKey(10414);
+
+  String get addressIssue => getContentValueFromKey(10415);
+
+  String get noTasksForThisDate => getContentValueFromKey(10416);
+
+  String get noTasks => getContentValueFromKey(10417);
+
+  String get deliveryConfirmedSuccessfully => getContentValueFromKey(10424);
+
+  String get needPhotoAndSignature => getContentValueFromKey(10425);
+
+  String get currentLocationUnavailable => getContentValueFromKey(10426);
+
+  String get cannotOpenNavigation => getContentValueFromKey(10427);
+
+  // EPODScreen translations
+  String get epodTitle => getContentValueFromKey(10418);
+
+  String get takePhoto => getContentValueFromKey(10419);
+
+  String get pleaseSign => getContentValueFromKey(10420);
+
+  String get reSign => getContentValueFromKey(10421);
+
+  String get done => getContentValueFromKey(10422);
+
+  String get pleaseSignFirst => getContentValueFromKey(10423);
 }

@@ -78,14 +78,14 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
   // Stores per-item cancellation reasons when user unchecks an item
   final Map<String, String> _itemCancelReasons = {};
   // Dropdown preset options
-  final List<String> _cancelReasonOptions = const [
-    'Customer cancelled',
-    'Damaged item',
-    'Out of stock',
-    'Wrong item prepared',
-    'Address issue',
-    'Other',
-  ];
+  List<String> get _cancelReasonOptions => [
+        language.customerCancelled,
+        language.damagedItem,
+        language.outOfStock,
+        language.wrongItemPrepared,
+        language.addressIssue,
+        language.other,
+      ];
 
   // Build item remarks list (only unchecked items with a reason)
   List<Map<String, dynamic>> _buildItemRemarks(OrderData order) {
@@ -118,13 +118,13 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
         return StatefulBuilder(
           builder: (ctx, setLocal) {
             return AlertDialog(
-              title: const Text('Cancellation Reason'),
+              title: Text(language.cancellationReason),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('Item: $itemName',
+                    child: Text('${language.item}: $itemName',
                         style:
                             const TextStyle(fontSize: 13, color: Colors.grey)),
                   ),
@@ -132,7 +132,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                   DropdownButtonFormField<String>(
                     value: current,
                     decoration:
-                        const InputDecoration(labelText: 'Select reason'),
+                        InputDecoration(labelText: language.selectReason),
                     items: _cancelReasonOptions
                         .map((r) => DropdownMenuItem(value: r, child: Text(r)))
                         .toList(),
@@ -145,17 +145,17 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                   TextField(
                     controller: customCtl,
                     maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Custom reason *',
-                      hintText: 'Please provide detailed reason',
+                    decoration: InputDecoration(
+                      labelText: language.customReason,
+                      hintText: language.pleaseProvideDetailedReason,
                       border: OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Align(
+                  Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      '* Required field',
+                      language.requiredField,
                       style: TextStyle(fontSize: 11, color: Colors.red),
                     ),
                   ),
@@ -164,7 +164,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, null),
-                  child: const Text('Cancel'),
+                  child: Text(language.cancel),
                 ),
                 ElevatedButton(
                   onPressed: () {
@@ -173,8 +173,8 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                     // 检查自定义原因是否为空
                     if (customReason.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please enter a detailed reason'),
+                        SnackBar(
+                          content: Text(language.pleaseEnterDetailedReason),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -183,7 +183,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
 
                     // 组合最终原因
                     String finalReason;
-                    if (current == 'Other') {
+                    if (current == language.other) {
                       finalReason = customReason;
                     } else {
                       finalReason = '$current - $customReason';
@@ -191,7 +191,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
 
                     Navigator.pop(ctx, finalReason);
                   },
-                  child: const Text('Confirm'),
+                  child: Text(language.confirm),
                 ),
               ],
             );
@@ -653,7 +653,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                     else if (statusList[selectedStatusIndex] == ORDER_ASSIGNED)
                       // Assigned：有数据展示分组；没数据展示空态
                       (groupedOrderDataList.isEmpty
-                          ? Center(child: Text('No tasks for this date'))
+                          ? Center(child: Text(language.noTasksForThisDate))
                           : SingleChildScrollView(
                               child: ExpansionPanelList(
                                 expansionCallback:
@@ -706,7 +706,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
 
                                               return AlertDialog(
                                                 title: Text(
-                                                  "Item List",
+                                                  language.itemList,
                                                   style: TextStyle(
                                                       fontWeight:
                                                           FontWeight.bold,
@@ -846,7 +846,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                                         Navigator.of(context)
                                                             .pop(),
                                                     child: Text(
-                                                      "Close",
+                                                      language.close,
                                                       style: TextStyle(
                                                           color: Colors.blue,
                                                           fontSize: 16),
@@ -869,7 +869,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                                       fontSize: 15),
                                                 ),
                                               ),
-                                              // Pickup All 按钮
+                                              // Pickup All button
                                               ElevatedButton.icon(
                                                 onPressed: () {
                                                   showConfirmDialogCustom(
@@ -879,9 +879,9 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                                     dialogType:
                                                         DialogType.CONFIRMATION,
                                                     title:
-                                                        'Pickup All Orders at This Address?',
+                                                        language.pickupAllOrdersAtThisAddress,
                                                     subTitle:
-                                                        'This will pickup all ${group.orders!.length} orders at ${group.deliveryOrderId ?? 'this address'}.',
+                                                        language.thisWillPickupAllOrders.replaceAll('{count}', '${group.orders!.length}').replaceAll('{address}', group.deliveryOrderId ?? 'this address'),
                                                     positiveText: language.yes,
                                                     negativeText: language.no,
                                                     onAccept: (c) async {
@@ -893,7 +893,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                                 icon: Icon(Icons.done_all,
                                                     size: 18,
                                                     color: Colors.white),
-                                                label: Text('Pickup All',
+                                                label: Text(language.pickupAll,
                                                     style: TextStyle(
                                                         fontSize: 12,
                                                         color: Colors.white)),
@@ -931,7 +931,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                     else
                       // 其他 tab：空列表也给空态
                       (orderData.isEmpty
-                          ? Center(child: Text('No tasks'))
+                          ? Center(child: Text(language.noTasks))
                           : SingleChildScrollView(
                               child: Padding(
                                 padding: EdgeInsets.symmetric(
@@ -1130,8 +1130,8 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                             appStore.setLoading(false); // 隐藏 loading
 
                             if (epodResult != null) {
-                              print('拍照路径: ${epodResult['photoPath']}');
-                              print('签名数据: ${epodResult['signature']}');
+                              print('Photo path: ${epodResult['photoPath']}');
+                              print('Signature data: ${epodResult['signature']}');
                               await GallerySaver.saveImage(
                                   epodResult['photoPath']);
                               // 这里应该加 loading
@@ -1141,9 +1141,9 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                 orderStatus: statusList[selectedStatusIndex],
                               );
                               appStore.setLoading(false); // 新增：操作完成后隐藏 loading
-                              toast('配送确认成功');
+                              toast(language.deliveryConfirmedSuccessfully);
                             } else {
-                              toast('需要完成拍照和签名才能确认配送');
+                              toast(language.needPhotoAndSignature);
                             }
                           } else {
                             showConfirmDialogCustom(
@@ -1778,7 +1778,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
   }) async {
     final current = await _getCurrentLatLng();
     if (current == null) {
-      toast('当前位置不可用，请稍后再试');
+      toast(language.currentLocationUnavailable);
       return;
     }
 
@@ -1807,7 +1807,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      toast('无法打开导航应用');
+      toast(language.cannotOpenNavigation);
     }
   }
 }

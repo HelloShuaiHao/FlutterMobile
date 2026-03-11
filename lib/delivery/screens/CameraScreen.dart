@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import '../../main.dart';
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({Key? key}) : super(key: key);
@@ -66,7 +67,7 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Take a Picture'),
+        title: Text(language.takePhoto),
         backgroundColor: Colors.blue,
       ),
       body: _isInitialized
@@ -82,7 +83,7 @@ class _CameraScreenState extends State<CameraScreen> {
                     children: [
                       ElevatedButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
+                        child: Text(language.cancel),
                       ),
                       ElevatedButton(
                         onPressed: _takePicture,
@@ -93,8 +94,8 @@ class _CameraScreenState extends State<CameraScreen> {
                             vertical: 15,
                           ),
                         ),
-                        child: const Text(
-                          'Take Picture',
+                        child: Text(
+                          language.takePhoto,
                           style: TextStyle(color: Colors.white),
                         ),
                       ),

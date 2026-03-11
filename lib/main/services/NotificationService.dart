@@ -47,7 +47,8 @@ class NotificationService {
 
     if (res.statusCode.isSuccessful()) {
     } else {
-      throw language.errorSomethingWentWrong;
+      // Silently fail - don't show generic error message
+      print('Notification error: ${res.statusCode}');
     }
   }
 }

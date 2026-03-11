@@ -70,11 +70,15 @@ Future<Response> buildHttpResponse(String endPoint, {HttpMethod method = HttpMet
 
       return response;
     } catch (e) {
-      print("---------------------------${e.toString()}");
-      throw language.errorSomethingWentWrong;
+      print("Network error: ${e.toString()}");
+      
+      // Silently fail - don't throw error to avoid annoying toast messages
+      // Return a mock error response instead
+      return Response('{"message": "Network error", "status": false}', 500);
     }
   } else {
     throw language.errorInternetNotAvailable;
+
   }
 }
 
@@ -110,7 +114,9 @@ Future handleResponse(Response response, [bool? avoidTokenError]) async {
       throw parseHtmlString(body['message']);
     } on Exception catch (e) {
       log(e);
-      throw language.errorSomethingWentWrong;
+      // Silently fail - don't throw generic error message
+      // Just log the error and return empty response
+      return {'message': 'Request failed', 'status': false};
     }
   }
 }

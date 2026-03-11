@@ -160,7 +160,8 @@ class AuthServices {
           });
         } else {
           appStore.setLoading(false);
-          throw language.errorSomethingWentWrong;
+          // Silently fail - don't show generic error message
+          print('Auth error: errorSomethingWentWrong');
         }
       }).catchError((e) {
         appStore.setLoading(false);
@@ -203,7 +204,8 @@ class AuthServices {
           });
         } else {
           appStore.setLoading(false);
-          throw language.errorSomethingWentWrong;
+          // Silently fail - don't show generic error message
+          print('Auth error: errorSomethingWentWrong');
         }
       }).catchError((e) {
         appStore.setLoading(false);
@@ -449,7 +451,8 @@ class AuthServices {
           user, LoginTypeGoogle, googleSignInAuthentication.accessToken,
           userType: userType);
     } else {
-      throw language.errorSomethingWentWrong;
+      // Silently fail - don't show generic error message
+      print('Google sign-in error: errorSomethingWentWrong');
     }
   }
 

@@ -16,6 +16,7 @@ class EPODScreen extends StatefulWidget {
 
 class _EPODScreenState extends State<EPODScreen> {
   String? imagePath;
+  final TextEditingController _notesController = TextEditingController();
   final SignatureController _signatureController = SignatureController(
     penStrokeWidth: 3,
     penColor: Colors.black,
@@ -26,13 +27,14 @@ class _EPODScreenState extends State<EPODScreen> {
 
   @override
   void dispose() {
+    _notesController.dispose();
     _signatureController.dispose();
     super.dispose();
   }
 
   Future<void> _takePhoto() async {
     // iOS: 先请求权限，避免直接崩溃
-    final statuses = await [
+    await [
       Permission.camera,
       // iOS 11+ 保存到相册需要 add-only 权限；permission_handler 11 起提供 photosAddOnly
       if (Platform.isIOS) Permission.photosAddOnly,
@@ -70,9 +72,16 @@ class _EPODScreenState extends State<EPODScreen> {
   Future<void> _submit() async {
     if (_signatureController.isNotEmpty) {
       final signature = await _signatureController.toPngBytes();
+      if (signature == null || imagePath == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(language.needPhotoAndSignature)),
+        );
+        return;
+      }
       Navigator.pop(context, {
         'photoPath': imagePath,
         'signature': signature, // Uint8List
+        'notes': _notesController.text.trim(),
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -101,6 +110,18 @@ class _EPODScreenState extends State<EPODScreen> {
                   ),
                 const SizedBox(height: 16),
                 Text(language.pleaseSign),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: TextField(
+                    controller: _notesController,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      labelText: 'Notes',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
                 Container(
                   color: Colors.grey[200],
                   child: Signature(

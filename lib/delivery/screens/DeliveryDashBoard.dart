@@ -1,5 +1,6 @@
 import 'package:gallery_saver/gallery_saver.dart';
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
@@ -11,12 +12,14 @@ import 'package:mighty_delivery/delivery/screens/EPODScreen.dart';
 
 import 'package:mighty_delivery/main/models/GroupedOrderData.dart';
 import 'package:mighty_delivery/main/services/LocationTrackingService.dart';
+import 'package:mighty_delivery/main/services/ProofOfDeliveryService.dart';
 
 import 'package:mighty_delivery/main/services/RoutePlanService.dart';
 import 'package:mighty_delivery/main/utils/storage.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../delivery/screens/OrdersMapScreen.dart';
+import '../../delivery/utils/task_item_unit_utils.dart';
 import '../../extensions/extension_util/context_extensions.dart';
 import '../../extensions/extension_util/int_extensions.dart';
 import '../../extensions/extension_util/string_extensions.dart';
@@ -227,27 +230,30 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
 
     final Map<String, Map<String, dynamic>> itemMap = {};
 
-    for (var item in taskItems) {
+    for (int index = 0; index < taskItems.length; index++) {
+      final item = taskItems[index];
       final itemName = item['name']?.toString() ?? 'Unknown Item';
       final itemId = item['id']?.toString() ?? '';
       final quantity =
           (item['quantity'] as num?)?.toInt() ?? 1; // 使用后台返回的 quantity 字段
+      final displayUnit = normalizeTaskItemUnit(item['uomName']?.toString());
+      final mergeKey = taskItemMergeKey(Map<String, dynamic>.from(item));
 
-      if (itemMap.containsKey(itemName)) {
+      if (itemMap.containsKey(mergeKey)) {
         // 相同名称的物品，累加数量
-        itemMap[itemName]!['count'] =
-            (itemMap[itemName]!['count'] as int) + quantity;
+        itemMap[mergeKey]!['count'] =
+            (itemMap[mergeKey]!['count'] as int) + quantity;
         // 保存所有相同物品的ID和索引
-        (itemMap[itemName]!['indices'] as List<int>)
-            .add(taskItems.indexOf(item));
-        (itemMap[itemName]!['ids'] as List<String>).add(itemId);
+        (itemMap[mergeKey]!['indices'] as List<int>).add(index);
+        (itemMap[mergeKey]!['ids'] as List<String>).add(itemId);
       } else {
         // 新物品
-        itemMap[itemName] = {
+        itemMap[mergeKey] = {
           'name': itemName,
           'count': quantity, // 使用 quantity 字段作为初始数量
+          'displayUnit': displayUnit,
           'item': item, // 保存第一个物品的完整信息
-          'indices': [taskItems.indexOf(item)], // 保存所有索引
+          'indices': [index], // 保存所有索引
           'ids': [itemId], // 保存所有ID
         };
       }
@@ -679,30 +685,55 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                                       (o) => o.taskItems ?? [])
                                                   .toList();
 
-                                              // 按名称分组统计数量 (使用 quantity 字段)
-                                              final Map<String, int>
-                                                  nameCountMap = {};
+                                              // 按名称 + 单位分组统计数量，避免不同单位被合并
+                                              final Map<String,
+                                                      Map<String, dynamic>>
+                                                  summaryMap = {};
                                               for (var taskItem
                                                   in allTaskItems) {
+                                                final item =
+                                                    Map<String, dynamic>.from(
+                                                        taskItem
+                                                            as Map<dynamic,
+                                                                dynamic>);
+                                                final mergeKey =
+                                                    taskItemMergeKey(item);
                                                 final itemName =
-                                                    taskItem['name']
-                                                            ?.toString() ??
+                                                    item['name']?.toString() ??
                                                         'Unknown Item';
-                                                final quantity = (taskItem[
+                                                final quantity = (item[
                                                             'quantity'] as num?)
                                                         ?.toInt() ??
-                                                    1; // 使用后台返回的 quantity 字段
-                                                nameCountMap[itemName] =
-                                                    (nameCountMap[itemName] ??
-                                                            0) +
-                                                        quantity;
+                                                    1;
+                                                final displayUnit =
+                                                    normalizeTaskItemUnit(
+                                                        item['uomName']
+                                                            ?.toString());
+
+                                                if (summaryMap
+                                                    .containsKey(mergeKey)) {
+                                                  summaryMap[mergeKey]![
+                                                      'count'] = (summaryMap[
+                                                              mergeKey]!['count']
+                                                          as int) +
+                                                      quantity;
+                                                } else {
+                                                  summaryMap[mergeKey] = {
+                                                    'name': itemName,
+                                                    'count': quantity,
+                                                    'displayUnit': displayUnit,
+                                                  };
+                                                }
                                               }
 
                                               // 排序
                                               final sortedEntries =
-                                                  nameCountMap.entries.toList()
+                                                  summaryMap.values.toList()
                                                     ..sort((a, b) =>
-                                                        a.key.compareTo(b.key));
+                                                        (a['name'] as String)
+                                                            .compareTo(
+                                                                b['name']
+                                                                    as String));
 
                                               return AlertDialog(
                                                 title: Text(
@@ -724,9 +755,14 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                                       children: sortedEntries
                                                           .map((entry) {
                                                         final itemName =
-                                                            entry.key;
+                                                            entry['name']
+                                                                as String;
                                                         final count =
-                                                            entry.value;
+                                                            entry['count']
+                                                                as int;
+                                                        final displayUnit =
+                                                            entry['displayUnit']
+                                                                as String;
                                                         return Container(
                                                           margin: EdgeInsets
                                                               .symmetric(
@@ -812,7 +848,9 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                                                       : null,
                                                                 ),
                                                                 child: Text(
-                                                                  '$count',
+                                                                  formatTaskItemCountLabel(
+                                                                      count,
+                                                                      displayUnit),
                                                                   style:
                                                                       TextStyle(
                                                                     fontSize:
@@ -1130,17 +1168,39 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                             appStore.setLoading(false); // 隐藏 loading
 
                             if (epodResult != null) {
-                              print('Photo path: ${epodResult['photoPath']}');
-                              print('Signature data: ${epodResult['signature']}');
-                              await GallerySaver.saveImage(
-                                  epodResult['photoPath']);
-                              // 这里应该加 loading
-                              appStore.setLoading(true); // 新增：签名完成后显示 loading
+                              final photoPath =
+                                  epodResult['photoPath'] as String?;
+                              final signatureBytes =
+                                  epodResult['signature'] as Uint8List?;
+                              final notes = epodResult['notes'] as String?;
+
+                              if (photoPath == null || signatureBytes == null) {
+                                toast(language.needPhotoAndSignature);
+                                return;
+                              }
+
+                              await GallerySaver.saveImage(photoPath);
+
+                              appStore.setLoading(true);
+                              try {
+                                await ProofOfDeliveryService()
+                                    .uploadProofOfDelivery(
+                                  taskHeaderId: data.id.validate(),
+                                  photoPath: photoPath,
+                                  signatureBytes: signatureBytes,
+                                  notes: notes,
+                                );
+                              } catch (e) {
+                                appStore.setLoading(false);
+                                toast('ePOD upload failed: $e');
+                                return;
+                              }
+
                               await onTapData(
                                 orderData: data,
                                 orderStatus: statusList[selectedStatusIndex],
                               );
-                              appStore.setLoading(false); // 新增：操作完成后隐藏 loading
+                              appStore.setLoading(false);
                               toast(language.deliveryConfirmedSuccessfully);
                             } else {
                               toast(language.needPhotoAndSignature);
@@ -1338,7 +1398,8 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                         final item = mergedItem['item'] as Map<String, dynamic>;
                         final indices = mergedItem['indices'] as List<int>;
                         final ids = mergedItem['ids'] as List<String>;
-                        final uomName = item['uomName']?.toString() ?? '';
+                        final displayUnit =
+                            mergedItem['displayUnit'] as String;
 
                         final isGroupSelected = _isGroupSelected(data, indices);
                         final isGroupPartial =
@@ -1453,10 +1514,10 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                               SizedBox(width: 8),
                               // 数量（右侧，固定宽度，与checkbox对齐）
                               Container(
-                                width: 60,
+                                width: 88,
                                 alignment: Alignment.centerRight,
                                 child: Text(
-                                  'x$itemCount${uomName.isNotEmpty ? ' $uomName' : ''}',
+                                  'x${formatTaskItemCountLabel(itemCount, displayUnit)}',
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,

@@ -19,6 +19,8 @@ import '../main/models/models.dart';
 import '../main/screens/SplashScreen.dart';
 import '../main/utils/Constants.dart';
 import '../main/utils/daily_logout_policy.dart';
+import '../main/utils/location_access_policy.dart';
+import '../main/utils/location_event_payload.dart';
 import 'extensions/common.dart';
 import 'extensions/shared_pref.dart';
 import 'languageConfiguration/AppLocalizations.dart';
@@ -160,7 +162,10 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
   String? color;
   Timer? _dailyLogoutTimer;
+  Timer? _locationAccessTimer;
+  final ValueNotifier<bool> _isLocationBlockedNotifier = ValueNotifier(false);
   bool _isForcingDailyLogout = false;
+  bool _gpsLostSent = false;
 
   @override
   void initState() {
@@ -179,6 +184,7 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     init();
     _scheduleDailyLogoutCheck();
+    _startLocationAccessMonitor();
     //  getColor();
   }
 
@@ -187,6 +193,7 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       _forceDailyLogoutIfNeeded();
       _scheduleDailyLogoutCheck();
+      _checkLocationAccess();
     }
   }
 
@@ -233,6 +240,62 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
     }
   }
 
+  void _startLocationAccessMonitor() {
+    _locationAccessTimer?.cancel();
+    _checkLocationAccess();
+    _locationAccessTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _checkLocationAccess(),
+    );
+  }
+
+  bool _shouldEnforceLocationAccess() {
+    return getBoolAsync(IS_LOGGED_IN) &&
+        getStringAsync(USER_TOKEN).isNotEmpty &&
+        getStringAsync(USER_TYPE) == DELIVERY_MAN;
+  }
+
+  Future<void> _checkLocationAccess() async {
+    if (!_shouldEnforceLocationAccess()) {
+      _gpsLostSent = false;
+      _isLocationBlockedNotifier.value = false;
+      return;
+    }
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final permission = await Geolocator.checkPermission();
+      final permissionGranted = permission == LocationPermission.always ||
+          permission == LocationPermission.whileInUse;
+      final blocked = isLocationAccessBlocked(
+        permissionGranted: permissionGranted,
+        serviceEnabled: serviceEnabled,
+      );
+      final wasBlocked = _isLocationBlockedNotifier.value;
+
+      if (blocked) {
+        _isLocationBlockedNotifier.value = true;
+        if (!_gpsLostSent) {
+          _gpsLostSent = true;
+          await LocationTrackingService.instance
+              .sendCurrentLocationEvent(LocationEventAddress.gpsLost);
+        }
+        return;
+      } else {
+        _gpsLostSent = false;
+        if (wasBlocked) {
+          await LocationTrackingService.instance.startTracking(
+            identityUserId: getStringAsync(USER_TOKEN),
+          );
+        }
+      }
+
+      _isLocationBlockedNotifier.value = false;
+    } catch (e) {
+      print('[MAIN] Location access check failed: $e');
+    }
+  }
+
   // getColor() async {
   //   await getLanguageList(0).then((value) {
   //     color = value.themeColor;
@@ -264,6 +327,8 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     _dailyLogoutTimer?.cancel();
+    _locationAccessTimer?.cancel();
+    _isLocationBlockedNotifier.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -282,7 +347,17 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
         builder: (context, child) {
           return ScrollConfiguration(
             behavior: MyBehavior(),
-            child: child!,
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _isLocationBlockedNotifier,
+              builder: (context, blocked, _) {
+                return Stack(
+                  children: [
+                    child!,
+                    if (blocked) const _LocationAccessBlockedOverlay(),
+                  ],
+                );
+              },
+            ),
           );
         },
         title: mAppName,
@@ -311,6 +386,59 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
             appStore.selectedLanguage.validate(value: defaultLanguageCode)),
       );
     });
+  }
+}
+
+class _LocationAccessBlockedOverlay extends StatelessWidget {
+  const _LocationAccessBlockedOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.black.withValues(alpha: 0.72),
+      child: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Container(
+              margin: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Icon(Icons.location_off, size: 44),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Location access is required',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Please enable location permission and device location services to continue using the app.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 18),
+                  ElevatedButton(
+                    onPressed: Geolocator.openLocationSettings,
+                    child: const Text('Open Location Settings'),
+                  ),
+                  TextButton(
+                    onPressed: Geolocator.openAppSettings,
+                    child: const Text('Open App Settings'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

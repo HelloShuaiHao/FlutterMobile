@@ -7,6 +7,7 @@ import 'package:http/http.dart';
 import 'package:intl/intl.dart';
 import 'package:mighty_delivery/main/network/http_utils.dart';
 import 'package:mighty_delivery/main/services/LocationTrackingService.dart';
+import 'package:mighty_delivery/main/utils/location_event_payload.dart';
 import 'package:mighty_delivery/main/utils/storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../extensions/extension_util/int_extensions.dart';
@@ -170,6 +171,11 @@ Future<void> logout(BuildContext context,
     bool isDeleteAccount = false,
     bool isVerification = false}) async {
   clearData() async {
+    print('[LOGOUT] sending logout location event before clearing session');
+    await LocationTrackingService.instance
+        .sendCurrentLocationEvent(LocationEventAddress.logout);
+    print('[LOGOUT] logout location event finished');
+
     SpUtil.token.val = '';
     // await HttpUtils.init(unAuthHandle: () {});
 
@@ -189,6 +195,8 @@ Future<void> logout(BuildContext context,
     await removeKey(CITY_DATA);
     await removeKey(FILTER_DATA);
     await removeKey(IS_VERIFIED_DELIVERY_MAN);
+    await removeKey(SELECTED_VEHICLE_LABEL);
+    await removeKey(SELECTED_VEHICLE_PLATE);
     await removeKey(OTP_VERIFIED);
     await removeKey(EMAIL_VERIFIED);
     await removeKey(UID);
@@ -197,8 +205,12 @@ Future<void> logout(BuildContext context,
     // 清除 vehicleId（重要：防止登出后继续上传位置）
     await LocationTrackingService.instance.stopTracking();
     SpUtil.remove("vehicleId");
+    SpUtil.remove(SELECTED_VEHICLE_LABEL);
+    SpUtil.remove(SELECTED_VEHICLE_PLATE);
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('vehicleId');
+    await prefs.remove(SELECTED_VEHICLE_LABEL);
+    await prefs.remove(SELECTED_VEHICLE_PLATE);
     await prefs.remove(USER_TOKEN);
     await prefs.setBool(IS_LOGGED_IN, false);
 
@@ -229,14 +241,17 @@ Future<void> logout(BuildContext context,
     positionStream!.cancel();
   }
   if (isDeleteAccount) {
-    clearData();
+    await clearData();
   } else if (isVerification) {
-    clearData();
+    await clearData();
     LoginScreen().launch(context, isNewTask: true);
   } else {
     appStore.setLoading(true);
-    clearData();
-    appStore.setLoading(false);
+    try {
+      await clearData();
+    } finally {
+      appStore.setLoading(false);
+    }
     // await logoutApi().then((value) async {
     //   clearData();
     //   appStore.setLoading(false);

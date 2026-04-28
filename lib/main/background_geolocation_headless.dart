@@ -4,6 +4,7 @@ import 'package:flutter_background_geolocation/flutter_background_geolocation.da
     as bg;
 import 'package:mighty_delivery/main/network/http_utils.dart';
 import 'package:mighty_delivery/main/utils/Constants.dart';
+import 'package:mighty_delivery/main/utils/location_event_payload.dart';
 import 'package:mighty_delivery/main/utils/storage.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // ⭐ 改用 SharedPreferences
 
@@ -136,8 +137,18 @@ void backgroundGeolocationHeadlessTask(bg.HeadlessEvent event) async {
       }
       break;
     case bg.Event.PROVIDERCHANGE:
-      // 仅记录，某些 ROM 会在 providerchange 后紧跟一次 location
-      print('[HEADLESS] providerchange payload=${jsonEncode(event.event)}');
+      await _safe(() async {
+        final providerEvent = event.event as bg.ProviderChangeEvent;
+        print('[HEADLESS] providerchange payload=${providerEvent.toMap()}');
+        if (!providerEvent.enabled ||
+            !providerEvent.gps ||
+            providerEvent.status ==
+                bg.ProviderChangeEvent.AUTHORIZATION_STATUS_DENIED ||
+            providerEvent.status ==
+                bg.ProviderChangeEvent.AUTHORIZATION_STATUS_RESTRICTED) {
+          await _uploadStoredLocationEvent(LocationEventAddress.gpsLost);
+        }
+      });
       break;
 
     case bg.Event.HEARTBEAT:
@@ -232,6 +243,8 @@ Future<void> _handleLocation(bg.Location loc) async {
     // 记录本次上传的位置和时间
     await prefs.setDouble('lastUploadLat', loc.coords.latitude);
     await prefs.setDouble('lastUploadLon', loc.coords.longitude);
+    await prefs.setDouble('LAST_LOCATION_LAT', loc.coords.latitude);
+    await prefs.setDouble('LAST_LOCATION_LON', loc.coords.longitude);
     await prefs.setInt('lastHeadlessUploadTime', currentTime);
   } catch (e) {
     print('[HEADLESS] ⚠️ Failed to check/save deduplication data: $e');
@@ -268,12 +281,12 @@ Future<void> _handleLocation(bg.Location loc) async {
     }
   } catch (_) {}
 
-  final payload = <String, dynamic>{
-    'address': address,
-    'VehicleId': vehicleId,
-    'latitude': loc.coords.latitude,
-    'longitude': loc.coords.longitude,
-  };
+  final payload = buildLocationEventPayload(
+    address: _locationEventAddressForValue(address),
+    vehicleId: vehicleId,
+    latitude: loc.coords.latitude,
+    longitude: loc.coords.longitude,
+  );
   print('[HEADLESS] 📤 Uploading payload: $payload');
 
   // 优先使用独立 Dio，避免 HttpUtils 可能尚未 init（主 isolate 尚未运行）
@@ -323,6 +336,72 @@ Future<void> _handleLocation(bg.Location loc) async {
       }
     } catch (ee) {
       print('[HEADLESS] ❌ fallback upload exception $ee');
+    }
+  }
+}
+
+LocationEventAddress _locationEventAddressForValue(String address) {
+  for (final value in LocationEventAddress.values) {
+    if (value.value == address) return value;
+  }
+  return LocationEventAddress.normal;
+}
+
+Future<void> _uploadStoredLocationEvent(LocationEventAddress address) async {
+  final prefs = await SharedPreferences.getInstance();
+  final isLoggedIn = prefs.getBool(IS_LOGGED_IN) ?? false;
+  final token = prefs.getString(USER_TOKEN) ?? '';
+  final userType = prefs.getString(USER_TYPE) ?? '';
+
+  if (!(isLoggedIn && token.isNotEmpty && userType == DELIVERY_MAN)) {
+    print(
+        '[HEADLESS] event ${address.value} blocked: isLoggedIn=$isLoggedIn hasToken=${token.isNotEmpty} userType=$userType');
+    return;
+  }
+
+  final latitude =
+      prefs.getDouble('LAST_LOCATION_LAT') ?? prefs.getDouble('lastUploadLat');
+  final longitude =
+      prefs.getDouble('LAST_LOCATION_LON') ?? prefs.getDouble('lastUploadLon');
+  if (latitude == null || longitude == null) {
+    print('[HEADLESS] event ${address.value} skipped: no stored location');
+    return;
+  }
+
+  final payload = buildLocationEventPayload(
+    address: address,
+    vehicleId: prefs.getString('vehicleId'),
+    latitude: latitude,
+    longitude: longitude,
+  );
+
+  try {
+    final Dio dio = Dio(BaseOptions(
+      baseUrl: SpUtil.baseUrl.val,
+      connectTimeout: const Duration(seconds: 30),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+        '__tenant': 'CF',
+      },
+    ));
+    final resp = await dio.post(
+      '/api/mobile/locations/create',
+      data: jsonEncode(payload),
+    );
+    print('[HEADLESS] event ${address.value} upload status=${resp.statusCode}');
+  } catch (e) {
+    print('[HEADLESS] event ${address.value} direct upload failed: $e');
+    try {
+      final wrapper = await HttpUtils.postJson(
+        '/api/mobile/locations/create',
+        data: payload,
+        showErrorTip: false,
+      );
+      print('[HEADLESS] event ${address.value} fallback code=${wrapper.code}');
+    } catch (ee) {
+      print('[HEADLESS] event ${address.value} fallback failed: $ee');
     }
   }
 }

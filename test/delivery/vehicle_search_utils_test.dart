@@ -17,5 +17,12 @@ void main() {
       expect(filterVehicles(vehicles, '7788').map((e) => e['id']), ['2']);
       expect(filterVehicles(vehicles, '').length, 2);
     });
+
+    test('extracts the selected vehicle plate for profile display', () {
+      expect(selectedVehiclePlate(vehicles.first), 'SGA1234');
+      expect(selectedVehiclePlate({'vehicleRegisterNo': '  SGB9999  '}),
+          'SGB9999');
+      expect(selectedVehiclePlate({'vehicleTypeName': 'Truck'}), '');
+    });
   });
 }

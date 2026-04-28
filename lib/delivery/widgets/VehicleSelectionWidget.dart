@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mighty_delivery/delivery/utils/vehicle_search_utils.dart';
+import 'package:mighty_delivery/main/utils/Constants.dart';
 import 'package:mighty_delivery/main/utils/storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -61,14 +62,20 @@ class _VehicleSelectionWidgetState extends State<VehicleSelectionWidget> {
     if (newValue == null || newValue.isEmpty) return;
 
     setState(() => _selectedId = newValue);
-    _controller.text = vehicleSearchLabel(vehicle);
+    final label = vehicleSearchLabel(vehicle);
+    final plate = selectedVehiclePlate(vehicle);
+    _controller.text = label;
 
     SpUtil.setJSON('vehicleId', newValue);
+    SpUtil.setJSON(SELECTED_VEHICLE_LABEL, label);
+    SpUtil.setJSON(SELECTED_VEHICLE_PLATE, plate);
     print('[VehicleSelection] Saved to GetStorage: $newValue');
 
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('vehicleId', newValue);
+      await prefs.setString(SELECTED_VEHICLE_LABEL, label);
+      await prefs.setString(SELECTED_VEHICLE_PLATE, plate);
       print('[VehicleSelection] Saved to SharedPreferences: $newValue');
     } catch (e) {
       print('[VehicleSelection] Save failed: $e');

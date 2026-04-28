@@ -82,6 +82,18 @@ class DProfileFragmentState extends State<DProfileFragment> {
     setState(() {});
   }
 
+  String get _selectedVehicleDisplay {
+    final plate = getStringAsync(SELECTED_VEHICLE_PLATE).trim();
+    if (plate.isNotEmpty) return plate;
+
+    final label = getStringAsync(SELECTED_VEHICLE_LABEL).trim();
+    if (label.isNotEmpty) return label;
+
+    return vehicle?.vehicleInfo.vehicleIdentificationNumber.validate() ??
+        vehicle?.vehicleInfo.make.validate() ??
+        '';
+  }
+
   Future<void> getPageListApi() async {
     appStore.setLoading(true);
     await getPagesList().then((value) {
@@ -211,14 +223,14 @@ class DProfileFragmentState extends State<DProfileFragment> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    vehicle != null
+                                    _selectedVehicleDisplay.isNotEmpty
                                         ? language.yourVehicle
                                         : language.noVehicleAdded,
                                     style: primaryTextStyle(),
                                   ),
                                   Text(
-                                    vehicle != null
-                                        ? "${vehicle!.vehicleInfo.make.validate()}"
+                                    _selectedVehicleDisplay.isNotEmpty
+                                        ? _selectedVehicleDisplay
                                         : "-",
                                     style: boldTextStyle(),
                                   ),

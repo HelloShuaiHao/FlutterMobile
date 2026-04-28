@@ -4,12 +4,18 @@ import 'package:flutter_background_geolocation/flutter_background_geolocation.da
 import 'package:mighty_delivery/extensions/shared_pref.dart';
 import 'package:mighty_delivery/main/network/http_utils.dart';
 import 'package:mighty_delivery/main/utils/Constants.dart';
+import 'package:mighty_delivery/main/utils/location_event_payload.dart';
 import 'package:mighty_delivery/main/utils/storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LocationTrackingService {
   LocationTrackingService._();
   static final LocationTrackingService instance = LocationTrackingService._();
+
+  static const String _lastLocationLatKey = 'LAST_LOCATION_LAT';
+  static const String _lastLocationLonKey = 'LAST_LOCATION_LON';
+  static const Duration _eventUploadTimeout = Duration(seconds: 8);
+  static const Duration _eventPositionTimeout = Duration(seconds: 6);
 
   static bool _configured = false;
   bool _started = false;
@@ -169,7 +175,13 @@ class LocationTrackingService {
   }
 
   Future<void> stopTracking() async {
-    if (_startingLock != null) await _startingLock!.future;
+    if (_startingLock != null) {
+      try {
+        await _startingLock!.future.timeout(const Duration(seconds: 4));
+      } on TimeoutException {
+        print('[BG] stopTracking waited start lock timeout; continuing stop');
+      }
+    }
     if (_started) {
       try {
         await bg.BackgroundGeolocation.stop();
@@ -193,6 +205,7 @@ class LocationTrackingService {
     print('[BG] configuring plugin...');
     bg.BackgroundGeolocation.onLocation(_onLocation, _onLocationError);
     bg.BackgroundGeolocation.onHeartbeat(_onHeartbeat);
+    bg.BackgroundGeolocation.onProviderChange(_onProviderChange);
 
     try {
       // ⭐ 步骤1：使用 ready() 初始化基础配置
@@ -325,12 +338,24 @@ class LocationTrackingService {
   void _onLocation(bg.Location location) {
     _lastLocation = location;
     _locationStreamController.add(location);
+    _saveLastLocation(location.coords.latitude, location.coords.longitude);
     print(
         '[BG] onLocation lat=${location.coords.latitude} lon=${location.coords.longitude}');
   }
 
   void _onLocationError(bg.LocationError error) {
     print('[BG] onLocationError $error');
+  }
+
+  void _onProviderChange(bg.ProviderChangeEvent event) async {
+    print('[BG] onProviderChange $event');
+    if (!event.enabled ||
+        !event.gps ||
+        event.status == bg.ProviderChangeEvent.AUTHORIZATION_STATUS_DENIED ||
+        event.status ==
+            bg.ProviderChangeEvent.AUTHORIZATION_STATUS_RESTRICTED) {
+      await sendCurrentLocationEvent(LocationEventAddress.gpsLost);
+    }
   }
 
   void _onHeartbeat(bg.HeartbeatEvent event) async {
@@ -401,12 +426,15 @@ class LocationTrackingService {
     _lastUploadAt = now;
     print('[BG] uploading...');
     try {
-      final r = await HttpUtils.postJson('/api/mobile/locations/create', data: {
-        'address': 'location.',
-        'VehicleId': vehicleId,
-        'latitude': loc.coords.latitude,
-        'longitude': loc.coords.longitude,
-      });
+      final r = await HttpUtils.postJson(
+        '/api/mobile/locations/create',
+        data: buildLocationEventPayload(
+          address: LocationEventAddress.normal,
+          vehicleId: vehicleId.toString(),
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        ),
+      );
       if (r.code == 0) {
         print('[BG] upload success ${now.toIso8601String()}');
       } else {
@@ -418,6 +446,101 @@ class LocationTrackingService {
   }
 
   bg.Location? get lastLocation => _lastLocation;
+
+  Future<void> sendCurrentLocationEvent(LocationEventAddress address) async {
+    print('[BG] event ${address.value} preparing upload');
+    final isLoggedIn = getBoolAsync(IS_LOGGED_IN);
+    final token = getStringAsync(USER_TOKEN);
+    final isDeliveryMan = getStringAsync(USER_TYPE) == DELIVERY_MAN;
+
+    if (!(isLoggedIn && token.isNotEmpty && isDeliveryMan)) {
+      print(
+          '[BG] event ${address.value} blocked: isLoggedIn=$isLoggedIn hasToken=${token.isNotEmpty} isDeliveryMan=$isDeliveryMan');
+      return;
+    }
+
+    final vehicleId = await _readVehicleId();
+    final location = await _readBestKnownLocation();
+    if (location == null) {
+      print('[BG] event ${address.value} skipped: no known location');
+      return;
+    }
+
+    final payload = buildLocationEventPayload(
+      address: address,
+      vehicleId: vehicleId,
+      latitude: location.$1,
+      longitude: location.$2,
+    );
+    print('[BG] event ${address.value} payload=$payload');
+
+    try {
+      final r = await HttpUtils.postJson(
+        '/api/mobile/locations/create',
+        data: payload,
+        showErrorTip: false,
+      ).timeout(_eventUploadTimeout);
+      print('[BG] event ${address.value} upload code=${r.code}');
+    } on TimeoutException {
+      print('[BG] event ${address.value} upload timed out');
+    } catch (e) {
+      print('[BG] event ${address.value} upload exception $e');
+    }
+  }
+
+  Future<String?> _readVehicleId() async {
+    final vehicleId = SpUtil.getJSON('vehicleId')?.toString();
+    if (vehicleId != null && vehicleId.isNotEmpty) return vehicleId;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final sharedVehicleId = prefs.getString('vehicleId');
+      if (sharedVehicleId != null && sharedVehicleId.isNotEmpty) {
+        return sharedVehicleId;
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
+  Future<(double, double)?> _readBestKnownLocation() async {
+    final loc = _lastLocation;
+    if (loc != null) {
+      return (loc.coords.latitude, loc.coords.longitude);
+    }
+
+    try {
+      final pos = await bg.BackgroundGeolocation.getCurrentPosition(
+        samples: 1,
+        timeout: 5000,
+        desiredAccuracy: bg.Config.DESIRED_ACCURACY_LOW,
+        persist: false,
+      ).timeout(_eventPositionTimeout);
+      _onLocation(pos);
+      return (pos.coords.latitude, pos.coords.longitude);
+    } catch (e) {
+      print('[BG] get current location for event failed: $e');
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lat = prefs.getDouble(_lastLocationLatKey) ??
+          prefs.getDouble('lastUploadLat');
+      final lon = prefs.getDouble(_lastLocationLonKey) ??
+          prefs.getDouble('lastUploadLon');
+      if (lat != null && lon != null) return (lat, lon);
+    } catch (_) {}
+
+    return null;
+  }
+
+  Future<void> _saveLastLocation(double latitude, double longitude) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble(_lastLocationLatKey, latitude);
+      await prefs.setDouble(_lastLocationLonKey, longitude);
+    } catch (_) {}
+  }
 
   void dispose() {
     _locationStreamController.close();
@@ -452,6 +575,7 @@ class LocationTrackingService {
             // 仅重建监听器，不触发新的操作
             bg.BackgroundGeolocation.onLocation(_onLocation, _onLocationError);
             bg.BackgroundGeolocation.onHeartbeat(_onHeartbeat);
+            bg.BackgroundGeolocation.onProviderChange(_onProviderChange);
             _configured = true;
             _started = true;
             _cachedIdentityUserId ??= SpUtil.token.val;
@@ -465,6 +589,7 @@ class LocationTrackingService {
         // Re-register listeners & mark configured
         bg.BackgroundGeolocation.onLocation(_onLocation, _onLocationError);
         bg.BackgroundGeolocation.onHeartbeat(_onHeartbeat);
+        bg.BackgroundGeolocation.onProviderChange(_onProviderChange);
         _configured = true; // mark
         _started = true; // mark running
         _cachedIdentityUserId ??= SpUtil.token.val; // attempt restore identity

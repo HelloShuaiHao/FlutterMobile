@@ -1,10 +1,14 @@
 String vehicleSearchLabel(Map<String, dynamic> vehicle) {
   final type = vehicle['vehicleTypeName']?.toString().trim() ?? '';
-  final registerNo = vehicle['vehicleRegisterNo']?.toString().trim() ?? '';
+  final registerNo = selectedVehiclePlate(vehicle);
 
   if (type.isEmpty) return registerNo;
   if (registerNo.isEmpty) return type;
   return '$type - $registerNo';
+}
+
+String selectedVehiclePlate(Map<String, dynamic> vehicle) {
+  return vehicle['vehicleRegisterNo']?.toString().trim() ?? '';
 }
 
 List<Map<String, dynamic>> filterVehicles(

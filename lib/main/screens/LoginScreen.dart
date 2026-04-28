@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -100,6 +102,19 @@ class LoginScreenState extends State<LoginScreen> {
     if (mounted) super.setState(fn);
   }
 
+  Future<void> _stopLocationTrackingForLogin(String reason) async {
+    try {
+      await LocationTrackingService.instance
+          .stopTracking()
+          .timeout(const Duration(seconds: 4));
+      print('[LOGIN] ✅ Stopped location service ($reason)');
+    } on TimeoutException {
+      print('[LOGIN] ⚠️ Stop location service timed out ($reason)');
+    } catch (e) {
+      print('[LOGIN] ⚠️ Failed to stop location service ($reason): $e');
+    }
+  }
+
   Future<void> loginApiCall() async {
     if (formKey.currentState!.validate()) {
       formKey.currentState!.save();
@@ -123,9 +138,7 @@ class LoginScreenState extends State<LoginScreen> {
 
           // 处理接口返回的错误
           if (result is Map && result['error'] != null) {
-            try {
-              await LocationTrackingService.instance.stopTracking();
-            } catch (_) {}
+            await _stopLocationTrackingForLogin('auth error');
             SpUtil.token.val = '';
             await setValue(IS_LOGGED_IN, false);
             await setValue(USER_TOKEN, '');
@@ -214,12 +227,7 @@ class LoginScreenState extends State<LoginScreen> {
           }
 
           // ⭐ 新增：先停止旧服务（如果有），避免冲突
-          try {
-            await LocationTrackingService.instance.stopTracking();
-            print('[LOGIN] ✅ Stopped old location service (if any)');
-          } catch (e) {
-            print('[LOGIN] ⚠️ Failed to stop old service: $e');
-          }
+          await _stopLocationTrackingForLogin('before start');
 
           // ⭐ 新增：请求电池优化豁免（仅提示，需要用户手动设置）
           try {
@@ -235,19 +243,22 @@ class LoginScreenState extends State<LoginScreen> {
           // 取得用户标识 (当前直接使用 access token 作为 identity 占位)
           final identityUserId = SpUtil.token.val;
           SpUtil.setJSON('selected_date', resolveTaskDate());
-          // 启动后台定位（只需调用一次）
-          await LocationTrackingService.instance.startTracking(
-            identityUserId: identityUserId,
-          );
-          print('[LOGIN] ✅ Location service started');
 
           // 登录成功才跳转
           DHomeFragment().launch(context, isNewTask: true);
+
+          // 启动后台定位不阻塞登录跳转，GPS gate 会负责权限不足时禁止使用
+          unawaited(
+            LocationTrackingService.instance
+                .startTracking(identityUserId: identityUserId)
+                .then((_) => print('[LOGIN] ✅ Location service started'))
+                .catchError((e) {
+              print('[LOGIN] ⚠️ Location service start failed: $e');
+            }),
+          );
         } catch (e) {
           appStore.setLoading(false);
-          try {
-            await LocationTrackingService.instance.stopTracking();
-          } catch (_) {}
+          await _stopLocationTrackingForLogin('login exception');
           SpUtil.token.val = '';
           await setValue(IS_LOGGED_IN, false);
           await setValue(USER_TOKEN, '');

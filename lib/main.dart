@@ -18,6 +18,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../main/models/models.dart';
 import '../main/screens/SplashScreen.dart';
 import '../main/utils/Constants.dart';
+import '../main/utils/daily_logout_policy.dart';
 import 'extensions/common.dart';
 import 'extensions/shared_pref.dart';
 import 'languageConfiguration/AppLocalizations.dart';
@@ -30,6 +31,7 @@ import 'main/services/AuthServices.dart';
 import 'main/services/NotificationService.dart';
 import 'main/services/UserServices.dart';
 import 'main/store/AppStore.dart';
+import 'main/network/RestApis.dart';
 import 'main/utils/Common.dart';
 import 'main/utils/firebase_options.dart';
 import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
@@ -122,12 +124,23 @@ void main() async {
     // 等待 1 秒，让 Headless boot 事件完成处理
     await Future.delayed(const Duration(seconds: 1));
     try {
+      final isLoggedIn = getBoolAsync(IS_LOGGED_IN);
+      final hasToken = getStringAsync(USER_TOKEN).isNotEmpty;
+      final isDeliveryMan = getStringAsync(USER_TYPE) == DELIVERY_MAN;
+
+      if (!(isLoggedIn && hasToken && isDeliveryMan)) {
+        print(
+            '[MAIN] Skip location tracking on launch: isLoggedIn=$isLoggedIn hasToken=$hasToken isDeliveryMan=$isDeliveryMan');
+        await LocationTrackingService.instance.stopTracking();
+        return;
+      }
+
       print('[MAIN] Starting location tracking on app launch...');
       // 先检查冷启动恢复
       await LocationTrackingService.instance.ensureColdStartInit();
       // 无条件启动追踪（内部会检查 vehicleId 决定是否上传）
       await LocationTrackingService.instance.startTracking(
-        identityUserId: '', // 可以为空，上传时会检查 vehicleId
+        identityUserId: getStringAsync(USER_TOKEN),
       );
       print('[MAIN] ✅ Location tracking started on app launch');
     } catch (e) {
@@ -143,13 +156,16 @@ class MyApp extends StatefulWidget {
   MyAppState createState() => MyAppState();
 }
 
-class MyAppState extends State<MyApp> {
+class MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
   String? color;
+  Timer? _dailyLogoutTimer;
+  bool _isForcingDailyLogout = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // 确保在 MaterialApp 构建完成后调用
@@ -162,7 +178,59 @@ class MyAppState extends State<MyApp> {
     });
 
     init();
+    _scheduleDailyLogoutCheck();
     //  getColor();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _forceDailyLogoutIfNeeded();
+      _scheduleDailyLogoutCheck();
+    }
+  }
+
+  DateTime? _lastDailyLogoutAt() {
+    final raw = getStringAsync(lastDailyForcedLogoutAtKey);
+    if (raw.isEmpty) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  void _scheduleDailyLogoutCheck() {
+    _dailyLogoutTimer?.cancel();
+    final now = DateTime.now();
+    final next = nextDailyLogoutAt(now);
+    _dailyLogoutTimer = Timer(next.difference(now), () async {
+      await _forceDailyLogoutIfNeeded();
+      _scheduleDailyLogoutCheck();
+    });
+  }
+
+  Future<void> _forceDailyLogoutIfNeeded() async {
+    if (_isForcingDailyLogout || !getBoolAsync(IS_LOGGED_IN)) return;
+
+    final now = DateTime.now();
+    if (!shouldForceDailyLogout(now: now, lastLogoutAt: _lastDailyLogoutAt())) {
+      return;
+    }
+
+    _isForcingDailyLogout = true;
+    try {
+      await setValue(lastDailyForcedLogoutAtKey, now.toIso8601String());
+      await LocationTrackingService.instance.stopTracking();
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        await logout(context);
+      } else {
+        await appStore.setLogin(false);
+        await setValue(IS_LOGGED_IN, false);
+      }
+      print('[MAIN] Forced daily logout at ${now.toIso8601String()}');
+    } catch (e) {
+      print('[MAIN] Forced daily logout failed: $e');
+    } finally {
+      _isForcingDailyLogout = false;
+    }
   }
 
   // getColor() async {
@@ -191,6 +259,13 @@ class MyAppState extends State<MyApp> {
     //     log('connected');
     //   }
     // });
+  }
+
+  @override
+  void dispose() {
+    _dailyLogoutTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override

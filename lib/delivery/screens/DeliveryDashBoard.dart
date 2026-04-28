@@ -13,6 +13,7 @@ import 'package:mighty_delivery/delivery/screens/EPODScreen.dart';
 import 'package:mighty_delivery/main/models/GroupedOrderData.dart';
 import 'package:mighty_delivery/main/services/LocationTrackingService.dart';
 import 'package:mighty_delivery/main/services/ProofOfDeliveryService.dart';
+import 'package:mighty_delivery/main/utils/task_date_policy.dart';
 
 import 'package:mighty_delivery/main/services/RoutePlanService.dart';
 import 'package:mighty_delivery/main/utils/storage.dart';
@@ -336,11 +337,8 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
       int statusCode = convertStatusToInt(enumStatus); // 将枚举字符串转换为整数
 
       // 读取本地选中的日期（没有则用今天）
-      final String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
       final dynamic saved = SpUtil.getJSON('selected_date');
-      final String taskDate = (saved != null && saved.toString().isNotEmpty)
-          ? saved.toString()
-          : today;
+      final String taskDate = resolveTaskDate(savedDate: saved?.toString());
 
       // 调用 RoutePlanService 获取数据（带 TaskDate）
       final routePlanService = RoutePlanService();
@@ -693,18 +691,17 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                                   in allTaskItems) {
                                                 final item =
                                                     Map<String, dynamic>.from(
-                                                        taskItem
-                                                            as Map<dynamic,
-                                                                dynamic>);
+                                                        taskItem as Map<dynamic,
+                                                            dynamic>);
                                                 final mergeKey =
                                                     taskItemMergeKey(item);
                                                 final itemName =
                                                     item['name']?.toString() ??
                                                         'Unknown Item';
-                                                final quantity = (item[
-                                                            'quantity'] as num?)
-                                                        ?.toInt() ??
-                                                    1;
+                                                final quantity =
+                                                    (item['quantity'] as num?)
+                                                            ?.toInt() ??
+                                                        1;
                                                 final displayUnit =
                                                     normalizeTaskItemUnit(
                                                         item['uomName']
@@ -713,10 +710,10 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                                 if (summaryMap
                                                     .containsKey(mergeKey)) {
                                                   summaryMap[mergeKey]![
-                                                      'count'] = (summaryMap[
-                                                              mergeKey]!['count']
-                                                          as int) +
-                                                      quantity;
+                                                          'count'] =
+                                                      (summaryMap[mergeKey]![
+                                                              'count'] as int) +
+                                                          quantity;
                                                 } else {
                                                   summaryMap[mergeKey] = {
                                                     'name': itemName,
@@ -727,13 +724,13 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                               }
 
                                               // 排序
-                                              final sortedEntries =
-                                                  summaryMap.values.toList()
-                                                    ..sort((a, b) =>
-                                                        (a['name'] as String)
-                                                            .compareTo(
-                                                                b['name']
-                                                                    as String));
+                                              final sortedEntries = summaryMap
+                                                  .values
+                                                  .toList()
+                                                ..sort((a, b) => (a['name']
+                                                        as String)
+                                                    .compareTo(
+                                                        b['name'] as String));
 
                                               return AlertDialog(
                                                 title: Text(
@@ -916,10 +913,16 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                                         ColorUtils.colorPrimary,
                                                     dialogType:
                                                         DialogType.CONFIRMATION,
-                                                    title:
-                                                        language.pickupAllOrdersAtThisAddress,
-                                                    subTitle:
-                                                        language.thisWillPickupAllOrders.replaceAll('{count}', '${group.orders!.length}').replaceAll('{address}', group.deliveryOrderId ?? 'this address'),
+                                                    title: language
+                                                        .pickupAllOrdersAtThisAddress,
+                                                    subTitle: language
+                                                        .thisWillPickupAllOrders
+                                                        .replaceAll('{count}',
+                                                            '${group.orders!.length}')
+                                                        .replaceAll(
+                                                            '{address}',
+                                                            group.deliveryOrderId ??
+                                                                'this address'),
                                                     positiveText: language.yes,
                                                     negativeText: language.no,
                                                     onAccept: (c) async {
@@ -1168,18 +1171,30 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                             appStore.setLoading(false); // 隐藏 loading
 
                             if (epodResult != null) {
+                              final photoPaths =
+                                  (epodResult['photoPaths'] as List?)
+                                      ?.whereType<String>()
+                                      .toList();
                               final photoPath =
                                   epodResult['photoPath'] as String?;
                               final signatureBytes =
                                   epodResult['signature'] as Uint8List?;
                               final notes = epodResult['notes'] as String?;
 
-                              if (photoPath == null || signatureBytes == null) {
+                              if ((photoPaths == null || photoPaths.isEmpty) &&
+                                  photoPath == null) {
                                 toast(language.needPhotoAndSignature);
                                 return;
                               }
 
-                              await GallerySaver.saveImage(photoPath);
+                              if (signatureBytes == null) {
+                                toast(language.needPhotoAndSignature);
+                                return;
+                              }
+
+                              for (final path in photoPaths ?? [photoPath!]) {
+                                await GallerySaver.saveImage(path);
+                              }
 
                               appStore.setLoading(true);
                               try {
@@ -1187,6 +1202,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                                     .uploadProofOfDelivery(
                                   taskHeaderId: data.id.validate(),
                                   photoPath: photoPath,
+                                  photoPaths: photoPaths,
                                   signatureBytes: signatureBytes,
                                   notes: notes,
                                 );
@@ -1398,8 +1414,7 @@ class DeliveryDashBoardState extends State<DeliveryDashBoard>
                         final item = mergedItem['item'] as Map<String, dynamic>;
                         final indices = mergedItem['indices'] as List<int>;
                         final ids = mergedItem['ids'] as List<String>;
-                        final displayUnit =
-                            mergedItem['displayUnit'] as String;
+                        final displayUnit = mergedItem['displayUnit'] as String;
 
                         final isGroupSelected = _isGroupSelected(data, indices);
                         final isGroupPartial =

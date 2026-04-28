@@ -3,18 +3,29 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:mighty_delivery/main/network/http_utils.dart';
+import 'package:mighty_delivery/main/utils/proof_of_delivery_upload_fields.dart';
 
 class ProofOfDeliveryService {
   static const String _uploadPath = '/api/delivery/proof-of-delivery/upload';
 
   Future<void> uploadProofOfDelivery({
     required String taskHeaderId,
-    required String photoPath,
+    String? photoPath,
+    List<String>? photoPaths,
     required Uint8List signatureBytes,
     String? notes,
   }) async {
     final nowUtc = DateTime.now().toUtc().toIso8601String();
     final finalNotes = (notes ?? '').trim();
+    final photos = [
+      ...?photoPaths,
+      if ((photoPaths == null || photoPaths.isEmpty) && photoPath != null)
+        photoPath,
+    ];
+
+    if (photos.isEmpty) {
+      throw ArgumentError('At least one proof-of-delivery photo is required');
+    }
 
     final formData = FormData.fromMap({
       'TaskHeaderId': taskHeaderId,
@@ -24,14 +35,16 @@ class ProofOfDeliveryService {
         signatureBytes,
         filename: 'signature-$taskHeaderId.png',
       ),
-      'Photos[0].PhotoFile': await MultipartFile.fromFile(
-        photoPath,
-        filename: File(photoPath).uri.pathSegments.last,
+      ...buildProofOfDeliveryPhotoFields(
+        photoCount: photos.length,
+        notes: finalNotes,
+        timestamp: nowUtc,
       ),
-      'Photos[0].PhotoType': '1',
-      'Photos[0].Description':
-          finalNotes.isNotEmpty ? finalNotes : 'Delivery photo',
-      'Photos[0].Timestamp': nowUtc,
+      for (var index = 0; index < photos.length; index++)
+        'Photos[$index].PhotoFile': await MultipartFile.fromFile(
+          photos[index],
+          filename: File(photos[index]).uri.pathSegments.last,
+        ),
     });
 
     await HttpUtils.dio.post(

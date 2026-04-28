@@ -33,6 +33,7 @@ import '../../main/network/RestApis.dart';
 import '../../main/utils/Common.dart';
 import '../../main/utils/Constants.dart';
 import '../../main/utils/Widgets.dart';
+import '../../main/utils/task_date_policy.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 
 import '../../delivery/fragment/DProfileFragment.dart';
@@ -133,8 +134,7 @@ class _DHomeFragmentState extends State<DHomeFragment>
 
     // 从 SharedPreferences 获取保存的日期
     String? savedDateStr = SpUtil.getJSON('selected_date');
-    String taskDate =
-        savedDateStr ?? DateFormat('yyyy-MM-dd').format(DateTime.now());
+    String taskDate = resolveTaskDate(savedDate: savedDateStr);
 
     try {
       appStore.setLoading(true); // 显示加载状态
@@ -152,18 +152,21 @@ class _DHomeFragmentState extends State<DHomeFragment>
   }
 
   String getCount(int index) {
+    final int pickedUpCount =
+        statusCountMap['PickedUp'] ?? statusCountMap['Picked Up'] ?? 0;
+
     switch (index) {
       case 0:
         // 总和：包括 Assigned、Delivered、Picked Up 等状态
         int total = (statusCountMap['Assigned'] ?? 0) +
             (statusCountMap['Delivered'] ?? 0) +
-            (statusCountMap['Picked Up'] ?? 0); // 确保包含 Picked Up
+            pickedUpCount; // 兼容 PickedUp / Picked Up
         return total.toString();
       case 1:
         return (statusCountMap['Assigned'] ?? 0).toString();
       case 2:
         // 第三个卡片是 PICKED_UP_ORDER，所以这里应显示 Picked Up 数量
-        return (statusCountMap['Picked Up'] ?? 0).toString();
+        return pickedUpCount.toString();
       case 3:
         // 第四个卡片是 COMPLETED_ORDER (Delivered)，这里显示 Delivered 数量
         return (statusCountMap['Delivered'] ?? 0).toString();

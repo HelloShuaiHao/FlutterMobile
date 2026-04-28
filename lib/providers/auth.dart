@@ -92,10 +92,16 @@ class MyAuthProvider with ChangeNotifier {
           'token_type': tokenType,
         };
       } else {
-        print('Login failed: ${response.msg}');
+        final data = response.data;
+        final serverMessage = (data is Map)
+            ? (data['error_description']?.toString() ??
+                data['error']?.toString())
+            : null;
+        final message = serverMessage ?? response.msg ?? 'Login failed';
+        print('Login failed: $message');
         return {
           'error': LoginActions.proceed,
-          'msg': response.msg,
+          'msg': message,
         };
       }
     } catch (error) {

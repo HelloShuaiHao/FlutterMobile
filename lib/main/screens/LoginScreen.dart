@@ -35,6 +35,7 @@ import '../../main/screens/RegisterScreen.dart';
 import '../../main/utils/Common.dart';
 import '../../main/utils/Constants.dart';
 import '../../main/utils/Widgets.dart';
+import '../../main/utils/task_date_policy.dart';
 import '../../user/screens/DashboardScreen.dart';
 import '../helper/encrypt_data.dart';
 import '../models/CityListModel.dart';
@@ -122,12 +123,21 @@ class LoginScreenState extends State<LoginScreen> {
 
           // 处理接口返回的错误
           if (result is Map && result['error'] != null) {
-            toast(result['error_description'] ?? "登录失败");
+            try {
+              await LocationTrackingService.instance.stopTracking();
+            } catch (_) {}
+            SpUtil.token.val = '';
+            await setValue(IS_LOGGED_IN, false);
+            await setValue(USER_TOKEN, '');
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('USER_TOKEN', '');
+            toast(result['msg'] ?? result['error_description'] ?? "登录失败");
             return;
           }
 
           // 标记登录成功 (SharedPreferences) 供 main.dart 读取
           await setValue(IS_LOGGED_IN, true);
+          await setValue(USER_TYPE, DELIVERY_MAN);
           // 可选: 同步保存 token 到 SharedPreferences 方便其它旧逻辑读取
           if (SpUtil.token.val.isNotEmpty) {
             await setValue(USER_TOKEN, SpUtil.token.val);
@@ -154,7 +164,8 @@ class LoginScreenState extends State<LoginScreen> {
                 await setValue(USER_NAME, userInfo['userName'] ?? '');
                 await setValue(
                     USER_CONTACT_NUMBER, userInfo['phoneNumber'] ?? '');
-                await setValue(USER_TYPE, userInfo['userType'] ?? CLIENT);
+                await setValue(USER_TYPE,
+                    (userInfo['userType'] ?? DELIVERY_MAN).toString());
                 await setValue(USER_ADDRESS, userInfo['address'] ?? '');
                 await setValue(STATUS, userInfo['status'] ?? 1);
 
@@ -172,6 +183,7 @@ class LoginScreenState extends State<LoginScreen> {
                 await setValue(USER_EMAIL, emailController.text);
                 await setValue(
                     NAME, emailController.text.split('@')[0]); // 使用邮箱前缀作为临时名称
+                await setValue(USER_TYPE, DELIVERY_MAN);
                 appStore.setUserEmail(emailController.text);
               }
             } catch (e) {
@@ -179,6 +191,7 @@ class LoginScreenState extends State<LoginScreen> {
               // 出错时也至少保存邮箱
               await setValue(USER_EMAIL, emailController.text);
               await setValue(NAME, emailController.text.split('@')[0]);
+              await setValue(USER_TYPE, DELIVERY_MAN);
               appStore.setUserEmail(emailController.text);
             }
           }
@@ -221,6 +234,7 @@ class LoginScreenState extends State<LoginScreen> {
 
           // 取得用户标识 (当前直接使用 access token 作为 identity 占位)
           final identityUserId = SpUtil.token.val;
+          SpUtil.setJSON('selected_date', resolveTaskDate());
           // 启动后台定位（只需调用一次）
           await LocationTrackingService.instance.startTracking(
             identityUserId: identityUserId,
@@ -231,6 +245,14 @@ class LoginScreenState extends State<LoginScreen> {
           DHomeFragment().launch(context, isNewTask: true);
         } catch (e) {
           appStore.setLoading(false);
+          try {
+            await LocationTrackingService.instance.stopTracking();
+          } catch (_) {}
+          SpUtil.token.val = '';
+          await setValue(IS_LOGGED_IN, false);
+          await setValue(USER_TOKEN, '');
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('USER_TOKEN', '');
           toast("登录失败: ${e.toString()}");
         }
       }

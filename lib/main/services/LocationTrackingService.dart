@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
     as bg;
+import 'package:mighty_delivery/extensions/shared_pref.dart';
 import 'package:mighty_delivery/main/network/http_utils.dart';
+import 'package:mighty_delivery/main/utils/Constants.dart';
 import 'package:mighty_delivery/main/utils/storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -236,8 +238,8 @@ class LocationTrackingService {
         ),
 
         // ============ 调试配置 ============
-        debug: true,
-        logLevel: bg.Config.LOG_LEVEL_VERBOSE,
+        debug: false,
+        logLevel: bg.Config.LOG_LEVEL_OFF,
         logMaxDays: 3,
       ));
 
@@ -251,6 +253,8 @@ class LocationTrackingService {
         distanceFilter: 0,
         locationUpdateInterval: 60000,
         fastestLocationUpdateInterval: 30000,
+        debug: false,
+        logLevel: bg.Config.LOG_LEVEL_OFF,
       ));
 
       print('[BG] ✅ Advanced config applied via setConfig');
@@ -364,6 +368,16 @@ class LocationTrackingService {
     bool force = false,
     String identityUserId = '',
   }) async {
+    final isLoggedIn = getBoolAsync(IS_LOGGED_IN);
+    final hasToken = getStringAsync(USER_TOKEN).isNotEmpty;
+    final isDeliveryMan = getStringAsync(USER_TYPE) == DELIVERY_MAN;
+
+    if (!(isLoggedIn && hasToken && isDeliveryMan)) {
+      print(
+          '[BG] auth gate blocked upload: isLoggedIn=$isLoggedIn hasToken=$hasToken isDeliveryMan=$isDeliveryMan');
+      return;
+    }
+
     // 检查 vehicleId 是否存在，没有则跳过上传
     final vehicleId = SpUtil.getJSON("vehicleId");
     if (vehicleId == null || vehicleId.toString().isEmpty) {

@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
     as bg;
 import 'package:mighty_delivery/main/network/http_utils.dart';
+import 'package:mighty_delivery/main/utils/Constants.dart';
 import 'package:mighty_delivery/main/utils/storage.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // ⭐ 改用 SharedPreferences
 
@@ -72,8 +73,8 @@ void backgroundGeolocationHeadlessTask(bg.HeadlessEvent event) async {
           desiredAccuracy: bg.Config.DESIRED_ACCURACY_HIGH,
           allowIdenticalLocations: true,
           disableElasticity: true,
-          debug: true,
-          logLevel: bg.Config.LOG_LEVEL_VERBOSE,
+          debug: false,
+          logLevel: bg.Config.LOG_LEVEL_OFF,
         ));
 
         print('[HEADLESS] ✅ Config enforced');
@@ -197,9 +198,19 @@ Future<void> _handleLocation(bg.Location loc) async {
   print(
       '[HEADLESS] location lat=${loc.coords.latitude} lon=${loc.coords.longitude}');
 
+  final prefs = await SharedPreferences.getInstance();
+  final isLoggedIn = prefs.getBool(IS_LOGGED_IN) ?? false;
+  final token = prefs.getString(USER_TOKEN) ?? '';
+  final userType = prefs.getString(USER_TYPE) ?? '';
+
+  if (!(isLoggedIn && token.isNotEmpty && userType == DELIVERY_MAN)) {
+    print(
+        '[HEADLESS] auth gate blocked upload: isLoggedIn=$isLoggedIn hasToken=${token.isNotEmpty} userType=$userType');
+    return;
+  }
+
   // ⭐ 新增：去重逻辑 - 检查是否和上次位置相同且时间过近
   try {
-    final prefs = await SharedPreferences.getInstance();
     final lastLat = prefs.getDouble('lastUploadLat');
     final lastLon = prefs.getDouble('lastUploadLon');
     final lastUploadTime = prefs.getInt('lastHeadlessUploadTime') ?? 0;
@@ -228,20 +239,17 @@ Future<void> _handleLocation(bg.Location loc) async {
 
   // ⭐ 关键修改：使用 SharedPreferences 替代 GetStorage
   String? vehicleId;
-  String? token;
+  String bearerToken = token;
 
   try {
-    final prefs = await SharedPreferences.getInstance();
-
     // 读取 vehicleId
     vehicleId = prefs.getString('vehicleId');
 
     // 读取 token（用于后续可能的认证需求）
-    token = prefs.getString('USER_TOKEN');
-
+    final tokenPreview =
+        bearerToken.length > 20 ? bearerToken.substring(0, 20) : bearerToken;
     print('[HEADLESS] vehicleId=$vehicleId (from SharedPreferences)');
-    print(
-        '[HEADLESS] token=${token?.substring(0, 20)}... (length=${token?.length ?? 0})');
+    print('[HEADLESS] token=$tokenPreview... (length=${bearerToken.length})');
 
     if (vehicleId == null || vehicleId.isEmpty) {
       print('[HEADLESS] ⚠️ vehicleId is null or empty, will upload without it');
@@ -254,7 +262,6 @@ Future<void> _handleLocation(bg.Location loc) async {
   // Address 逻辑：优先从 SharedPreferences 读取最近一次前台保存的 address（如果你后续在前台写入）
   String address = 'location.'; // 默认占位
   try {
-    final prefs = await SharedPreferences.getInstance();
     final lastAddress = prefs.getString('LAST_KNOWN_ADDRESS');
     if (lastAddress != null && lastAddress.isNotEmpty) {
       address = lastAddress;
@@ -278,13 +285,12 @@ Future<void> _handleLocation(bg.Location loc) async {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        if (bearerToken.isNotEmpty) 'Authorization': 'Bearer $bearerToken',
         '__tenant': 'CF',
       },
     ));
 
-    print(
-        '[HEADLESS] baseUrl=$base hasToken=${token != null && token.isNotEmpty}');
+    print('[HEADLESS] baseUrl=$base hasToken=${bearerToken.isNotEmpty}');
     final resp = await dio.post(
       '/api/mobile/locations/create',
       data: jsonEncode(payload),

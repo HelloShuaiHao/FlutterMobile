@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:intl/intl.dart';
 import 'package:mighty_delivery/main/network/http_utils.dart';
+import 'package:mighty_delivery/main/services/LocationTrackingService.dart';
 import 'package:mighty_delivery/main/utils/storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../extensions/extension_util/int_extensions.dart';
 import '../../extensions/extension_util/string_extensions.dart';
 import '../../extensions/extension_util/widget_extensions.dart';
@@ -193,7 +195,12 @@ Future<void> logout(BuildContext context,
     await removeKey(LOGIN_TYPE);
 
     // 清除 vehicleId（重要：防止登出后继续上传位置）
+    await LocationTrackingService.instance.stopTracking();
     SpUtil.remove("vehicleId");
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('vehicleId');
+    await prefs.remove(USER_TOKEN);
+    await prefs.setBool(IS_LOGGED_IN, false);
 
     // 清除密码（除非勾选了"记住我"）
     // 注意：USER_EMAIL 不在这里清除，因为需要在登录时重新设置

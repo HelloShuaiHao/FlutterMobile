@@ -353,6 +353,10 @@ class _DHomeFragmentState extends State<DHomeFragment>
       } else {
         print(
             '[DHOME] ✅ Location service already running (enabled=${state.enabled} isMoving=${state.isMoving})');
+        final identityUserId = SpUtil.token.val;
+        await LocationTrackingService.instance.startTracking(
+          identityUserId: identityUserId,
+        );
       }
     } catch (e) {
       print('[DHOME] ⚠️ Failed to restore location service: $e');

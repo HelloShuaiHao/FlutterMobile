@@ -20,6 +20,8 @@ class LocationTrackingService {
   static bool _configured = false;
   bool _started = false;
   Completer<void>? _startingLock;
+  bool _stopRequested = false;
+  int _lifecycleGeneration = 0;
 
   DateTime? _lastUploadAt;
   // 与 heartbeatInterval对齐，确保每次心跳都能通过时间窗口判断
@@ -40,6 +42,8 @@ class LocationTrackingService {
     String identityUserId = '', // 可以为空，上传时检查 vehicleId
     String? bearerToken,
   }) async {
+    final generation = ++_lifecycleGeneration;
+    _stopRequested = false;
     print(
         '[BG] startTracking(identity=$identityUserId) configured=$_configured started=$_started lock=${_startingLock != null}');
     _cachedIdentityUserId = identityUserId; // cache for timer fallback
@@ -50,23 +54,35 @@ class LocationTrackingService {
         print(
             '[BG][RESTORE] already running enabled=${state.enabled} isMoving=${state.isMoving}');
         if (state.isMoving != true) {
-          await bg.BackgroundGeolocation.changePace(true);
+          await _tryChangePace('[RESTORE]');
           print('[BG][RESTORE] forced moving again');
         }
         if (_lastLocation != null) {
           print(
               '[BG][RESTORE] last cached lat=${_lastLocation!.coords.latitude} lon=${_lastLocation!.coords.longitude}');
+          await _tryUpload(force: true, identityUserId: identityUserId);
+        } else {
+          print('[BG][RESTORE] no cached location -> force first fix');
+          await _forceFirstFix(identityUserId);
         }
         _startPeriodicUploader();
-        await _tryUpload(force: true, identityUserId: identityUserId);
         return;
       } catch (e) {
         print('[BG][RESTORE] quick path failed: $e -> continue normal flow');
       }
     }
     if (_startingLock != null) {
-      await _startingLock!.future;
+      try {
+        await _startingLock!.future.timeout(const Duration(seconds: 4));
+      } on TimeoutException {
+        print('[BG] startTracking waited previous start lock timeout; continuing new start');
+        _startingLock = null;
+      }
       print('[BG] waited previous start. started=$_started');
+      if (_isStartCancelled(generation)) {
+        print('[BG] start aborted after waiting previous start');
+        return;
+      }
       if (_started) {
         await _tryUpload(force: true, identityUserId: identityUserId);
       }
@@ -102,7 +118,7 @@ class LocationTrackingService {
         _started = true;
         print('[BG] already enabled -> treat as restore');
         if (state.isMoving != true) {
-          await bg.BackgroundGeolocation.changePace(true);
+          await _tryChangePace('[restore]');
           print('[BG] ✅ Forced moving state (restore)');
         }
         await _forceFirstFix(identityUserId);
@@ -111,13 +127,23 @@ class LocationTrackingService {
       }
     }
 
-    _startingLock = Completer<void>();
+    final startLock = Completer<void>();
+    _startingLock = startLock;
     try {
+      if (_isStartCancelled(generation)) {
+        print('[BG] start skipped: stop requested');
+        return;
+      }
       print('[BG] calling start() ...');
       await bg.BackgroundGeolocation.start();
+      if (_isStartCancelled(generation)) {
+        print('[BG] start completed after stop request -> stopping native service');
+        await bg.BackgroundGeolocation.stop();
+        return;
+      }
       _started = true;
       print('[BG] start() success');
-      await bg.BackgroundGeolocation.changePace(true);
+      await _tryChangePace('[start]');
       print('[BG] ✅ Forced moving state');
 
       // ⭐ 新增：强制触发第一次心跳（验证心跳是否工作）
@@ -154,14 +180,27 @@ class LocationTrackingService {
       print('[BG] ⏰ Next heartbeat expected in ~60 seconds...');
     } catch (e) {
       print('[BG] start() error: $e');
+      if (_isStartCancelled(generation)) {
+        print('[BG] start retry skipped: stop requested');
+        return;
+      }
       // Retry once after short delay if start fails
       try {
         await Future.delayed(const Duration(seconds: 2));
+        if (_isStartCancelled(generation)) {
+          print('[BG] start retry skipped: stop requested');
+          return;
+        }
         print('[BG] retrying start() ...');
         await bg.BackgroundGeolocation.start();
+        if (_isStartCancelled(generation)) {
+          print('[BG] retry start completed after stop request -> stopping native service');
+          await bg.BackgroundGeolocation.stop();
+          return;
+        }
         _started = true;
         print('[BG] retry start() success');
-        await bg.BackgroundGeolocation.changePace(true);
+        await _tryChangePace('[retry]');
         print('[BG] ✅ Forced moving state (retry)');
         await _forceFirstFix(identityUserId);
         _startPeriodicUploader();
@@ -169,12 +208,31 @@ class LocationTrackingService {
         print('[BG] retry start() failed: $e2');
       }
     } finally {
-      _startingLock?.complete();
-      _startingLock = null;
+      if (!startLock.isCompleted) startLock.complete();
+      if (identical(_startingLock, startLock)) {
+        _startingLock = null;
+      }
+    }
+  }
+
+  bool _isStartCancelled(int generation) =>
+      _stopRequested || generation != _lifecycleGeneration;
+
+  Future<void> _tryChangePace(String reason) async {
+    try {
+      await bg.BackgroundGeolocation
+          .changePace(true)
+          .timeout(const Duration(seconds: 4));
+    } on TimeoutException {
+      print('[BG] changePace timeout $reason; continuing to first fix');
+    } catch (e) {
+      print('[BG] changePace failed $reason: $e');
     }
   }
 
   Future<void> stopTracking() async {
+    _stopRequested = true;
+    _lifecycleGeneration++;
     if (_startingLock != null) {
       try {
         await _startingLock!.future.timeout(const Duration(seconds: 4));
@@ -596,7 +654,7 @@ class LocationTrackingService {
 
         // Force moving if not
         if (state.isMoving != true) {
-          await bg.BackgroundGeolocation.changePace(true);
+          await _tryChangePace('[COLD_START]');
           print('[BG][COLD_START] forced moving');
         }
 
